@@ -74,5 +74,10 @@ namespace ScreenControl
             btnTurnOffScreen.Click += btnTurnOffScreen_Click;
             this.Controls.Add(btnTurnOffScreen);
         }
+
+        private void MainForm_Load_1(object sender, EventArgs e)
+        {
+
+        }
     }
 }
