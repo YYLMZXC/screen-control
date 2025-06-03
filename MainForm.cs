@@ -61,19 +61,7 @@ namespace ScreenControl
             LockAndTurnOffScreen();
         }
 
-        private void MainForm_Load(object sender, EventArgs e)
-        {
-            // 初始化按钮
-            Button btnTurnOffScreen = new Button
-            {
-                Location = new System.Drawing.Point(100, 50),
-                Size = new System.Drawing.Size(200, 50),
-                Text = "锁屏并关闭屏幕",
-                UseVisualStyleBackColor = true
-            };
-            btnTurnOffScreen.Click += btnTurnOffScreen_Click;
-            this.Controls.Add(btnTurnOffScreen);
-        }
+       
 
         private void MainForm_Load_1(object sender, EventArgs e)
         {
