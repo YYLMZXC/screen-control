@@ -45,24 +45,25 @@ def main():
         print("检查git状态失败")
         return
     
-    # 如果没有更改，直接退出
-    if "nothing to commit, working tree clean" in output:
-        print("没有更改需要提交")
-        return
+    # 检查是否有更改需要提交
+    has_changes = "nothing to commit, working tree clean" not in output
     
-    # 添加所有更改
-    print("添加所有更改...")
-    success, _ = run_command("git add .")
-    if not success:
-        print("添加更改失败")
-        return
-    
-    # 提交更改
-    print(f"提交更改: {commit_message}")
-    success, _ = run_command(f'git commit -m "{commit_message}"')
-    if not success:
-        print("提交更改失败")
-        return
+    if has_changes:
+        # 添加所有更改
+        print("添加所有更改...")
+        success, _ = run_command("git add .")
+        if not success:
+            print("添加更改失败")
+            return
+        
+        # 提交更改
+        print(f"提交更改: {commit_message}")
+        success, _ = run_command(f'git commit -m "{commit_message}"')
+        if not success:
+            print("提交更改失败")
+            return
+    else:
+        print("没有更改需要提交，但将继续执行推送操作")
     
     # 设置远程仓库
     gitee_url = "https://gitee.com/yylmzxc/screen-control.git"
