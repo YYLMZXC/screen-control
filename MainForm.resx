@@ -117,4 +117,24 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <assembly alias="System.Drawing" name="System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+  <data name="$this.Icon" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+    <value>
+        AAABAAEAEBAAAAEAGABoAwAAFgAAACgAAAAQAAAAIAAAAAEAGAAAAAAAAAAAAMQOAADEDgAAAAAAAAAA
+        AAD4/fz3/Pv6/Pz5/Pr6/Pz5+/v6/Pz6/vn5/Pr6/fv4+/n6/Pz6/Pz9/f38/f39/f35/f76/Pz5/v33
+        +/z6/Pz6/fv4+fX4+fX9+/r5+vj5/Pr6/fv6/Pz4/fz5/v31+vn29vbw8e/t6+rw6+r59fT39fT6+Pf7
+        9fD49O/9+vb3+vj6+/n8/fv6/Pz6/Pz3+/zu7Ovn5eTo4+Dr4t/ufzvt3df2fDr9mVH45d327er69/P6
+        +/f4+/n5/Pr6/Pz3/Pvv7+/t6+rt6Ofx6OT+lEH69vX9jz35dyT/dRX8fRv6+fX8//35+/v6/Pz4/v33
+        /Pvz8fDx7+7w7u307+z/mUf18/Ly8O/18fD9kUD46MT8/fv1+vn6/Pz6/Pz5+/v6/Pz39/fz9PL29PP7
+        +PT9l0Xy8PDe19T08vH59/f49vX+lUT7kkn2/Pv6/P37/f36/Pz7+fj4+ff4+ff+/fn/lULz8fDXzsv/
+        /fz9kkH49PP29PP9+fj4/fz8/Pz5/f73/Pv7/vz6+/n7/Pr////9lUL08vLz8fD18/L9kT//lDn29PP+
+        /Pv4/fz5/f76/Pz4/fz////8/fv6/fv////9l0T0l1Lz8fDo5OP69O308vH39fT8+vn4/fz6/Pz6/Pz6
+        /Pz3/fz1+/r5/v32+/r9kUP+n0L4kkDzjkD18/L29PP29PP8+vn5/v36/Pz4/fz4/fz6/Pz4/fz5/v35
+        /f76/Pz3/PvylEH7lkv3kT/2kUL49PP9+/r5/v36/Pz6/Pz6/Pz4/fz5/v34+vv6/Pz6/Pz6/Pz6/Pz1
+        +/r8/v7zlUz6lEH+l0H3/Pv6/Pz7/f36/Pz4/fz4/fz4/fz6/Pz6/Pz6/fv5+/v6/Pz3/Pv4/fz8/v78
+        /v76/Pz6/Pz4/fz6/Pz8/Pz6/Pz4/v36/Pz8/Pz6/Pz6/Pz2+/r3/Pv4+vr4/fz4/fz2+/r3/Pv6/Pz5
+        +/v6/Pz4/fz6/Pz6/Pz5+/v6/Pz4/fz3+/z5+/v3+/z6/Pz3/Pv6/Pz3/Pv6/Pz6/PwAAAAAAAAAAAAA
+        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+</value>
+  </data>
 </root>
