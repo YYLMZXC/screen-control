@@ -63,6 +63,15 @@ namespace ScreenControl
         [DllImport("user32.dll")]
         private static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
 
+        // 防止系统睡眠
+        [DllImport("kernel32.dll")]
+        private static extern uint SetThreadExecutionState(uint esFlags);
+
+        // 电源管理常量
+        private const uint ES_CONTINUOUS = 0x80000000;
+        private const uint ES_DISPLAY_REQUIRED = 0x00000002;
+        private const uint ES_SYSTEM_REQUIRED = 0x00000001;
+
         [StructLayout(LayoutKind.Sequential)]
         private struct LASTINPUTINFO
         {
@@ -100,6 +109,9 @@ namespace ScreenControl
                 
                 // 发送消息关闭屏幕
                 SendMessage(this.Handle, WM_SYSCOMMAND, (IntPtr)SC_MONITORPOWER, (IntPtr)MONITOR_OFF);
+                
+                // 设置线程执行状态，防止系统睡眠但允许显示关闭
+                SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
                 
                 // 启动监控计时器
                 monitorTimer.Start();
@@ -182,6 +194,9 @@ namespace ScreenControl
                 monitorTimer.Stop();
                 isScreenOff = false;
                 
+                // 恢复正常电源状态
+                SetThreadExecutionState(ES_CONTINUOUS);
+                
                 string message = $"屏幕已唤醒，关闭时长：{duration.TotalMinutes:F2}分钟（{duration.Hours}小时{duration.Minutes}分钟{duration.Seconds}秒）";
                 LogOperation(message);
                 UpdateStatus(message);
@@ -216,6 +231,13 @@ namespace ScreenControl
         {
             base.OnFormClosing(e);
             monitorTimer.Stop();
+            
+            // 恢复正常电源状态
+            if (isScreenOff)
+            {
+                SetThreadExecutionState(ES_CONTINUOUS);
+            }
+            
             LogOperation("应用程序关闭");
         }
     }
