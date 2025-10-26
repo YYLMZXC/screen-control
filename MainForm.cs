@@ -11,12 +11,15 @@ namespace ScreenControl
         private DateTime screenOffTime;
         private bool isScreenOff = false;
         private const string LogFilePath = "bugs/screencontrol.log";
+        private Label statusLabel; // 用于显示状态信息的标签
 
         public MainForm()
         {
             InitializeComponent();
             InitializeMonitorTimer();
+            InitializeStatusLabel();
             LogOperation("应用程序启动");
+            UpdateStatus("应用程序已启动，就绪");
         }
 
         private void InitializeMonitorTimer()
@@ -24,6 +27,28 @@ namespace ScreenControl
             monitorTimer = new System.Windows.Forms.Timer();
             monitorTimer.Interval = 1000; // 1秒检查一次
             monitorTimer.Tick += MonitorTimer_Tick;
+        }
+
+        private void InitializeStatusLabel()
+        {
+            statusLabel = new Label();
+            statusLabel.Text = "就绪";  
+            statusLabel.Width = this.ClientSize.Width - 20;
+            statusLabel.Left = 10;
+            statusLabel.Top = this.ClientSize.Height - 30;
+            statusLabel.AutoSize = false;
+            statusLabel.Height = 20;
+            statusLabel.BorderStyle = BorderStyle.FixedSingle;
+            statusLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.Controls.Add(statusLabel);
+        }
+
+        private void UpdateStatus(string message)
+        {
+            if (statusLabel != null)
+            {
+                statusLabel.Text = message;
+            }
         }
 
         // 立即关闭屏幕
@@ -81,12 +106,12 @@ namespace ScreenControl
                 
                 string message = $"屏幕已关闭，时间：{screenOffTime:yyyy-MM-dd HH:mm:ss}";
                 LogOperation(message);
-                MessageBox.Show(message, "信息", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                UpdateStatus(message);
             }
             catch (Exception ex)
             {
                 string errorMsg = $"关闭屏幕失败：{ex.Message}";
-                MessageBox.Show(errorMsg, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                UpdateStatus(errorMsg);
                 LogOperation(errorMsg);
             }
         }
@@ -108,7 +133,7 @@ namespace ScreenControl
             catch (Exception ex)
             {
                 string errorMsg = $"锁屏并关闭屏幕失败：{ex.Message}";
-                MessageBox.Show(errorMsg, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                UpdateStatus(errorMsg);
                 LogOperation(errorMsg);
             }
         }
@@ -146,7 +171,7 @@ namespace ScreenControl
                 
                 string message = $"屏幕已唤醒，关闭时长：{duration.TotalMinutes:F2}分钟（{duration.Hours}小时{duration.Minutes}分钟{duration.Seconds}秒）";
                 LogOperation(message);
-                MessageBox.Show(message, "信息", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                UpdateStatus(message);
             }
         }
 
