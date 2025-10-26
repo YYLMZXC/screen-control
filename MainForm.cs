@@ -161,6 +161,12 @@ namespace ScreenControl
 
         private void btnTurnOffScreen_Click(object sender, EventArgs e)
         {
+            // 点击按钮后只关闭屏幕
+            TurnOffScreen();
+        }
+
+        private void btnLockAndTurnOffScreen_Click(object sender, EventArgs e)
+        {
             // 点击按钮后先锁屏再关闭屏幕
             LockAndTurnOffScreen();
         }

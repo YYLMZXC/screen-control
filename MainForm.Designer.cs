@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace ScreenControl
 {
@@ -31,26 +31,39 @@ namespace ScreenControl
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
-            this.button2 = new System.Windows.Forms.Button();
+            this.btnTurnOffScreen = new System.Windows.Forms.Button();
+            this.btnLockAndTurnOffScreen = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
-            // button2
+            // btnTurnOffScreen
             // 
-            this.button2.Location = new System.Drawing.Point(176, 150);
-            this.button2.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(201, 50);
-            this.button2.TabIndex = 1;
-            this.button2.Text = "立刻关闭屏幕";
-            this.button2.UseVisualStyleBackColor = true;
-            this.button2.Click += new System.EventHandler(this.btnTurnOffScreen_Click);
+            this.btnTurnOffScreen.Location = new System.Drawing.Point(100, 150);
+            this.btnTurnOffScreen.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.btnTurnOffScreen.Name = "btnTurnOffScreen";
+            this.btnTurnOffScreen.Size = new System.Drawing.Size(150, 50);
+            this.btnTurnOffScreen.TabIndex = 1;
+            this.btnTurnOffScreen.Text = "关闭屏幕";
+            this.btnTurnOffScreen.UseVisualStyleBackColor = true;
+            this.btnTurnOffScreen.Click += new System.EventHandler(this.btnTurnOffScreen_Click);
+            // 
+            // btnLockAndTurnOffScreen
+            // 
+            this.btnLockAndTurnOffScreen.Location = new System.Drawing.Point(350, 150);
+            this.btnLockAndTurnOffScreen.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.btnLockAndTurnOffScreen.Name = "btnLockAndTurnOffScreen";
+            this.btnLockAndTurnOffScreen.Size = new System.Drawing.Size(150, 50);
+            this.btnLockAndTurnOffScreen.TabIndex = 2;
+            this.btnLockAndTurnOffScreen.Text = "锁屏并关闭屏幕";
+            this.btnLockAndTurnOffScreen.UseVisualStyleBackColor = true;
+            this.btnLockAndTurnOffScreen.Click += new System.EventHandler(this.btnLockAndTurnOffScreen_Click);
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(600, 360);
-            this.Controls.Add(this.button2);
+            this.Controls.Add(this.btnTurnOffScreen);
+            this.Controls.Add(this.btnLockAndTurnOffScreen);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.Name = "MainForm";
@@ -61,7 +74,8 @@ namespace ScreenControl
         }
 
         #endregion
-        private System.Windows.Forms.Button button2;
+        private System.Windows.Forms.Button btnTurnOffScreen;
+        private System.Windows.Forms.Button btnLockAndTurnOffScreen;
     }
 }
 
