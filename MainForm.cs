@@ -240,5 +240,23 @@ namespace ScreenControl
             
             LogOperation("应用程序关闭");
         }
+
+        private void MainForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            // 处理数字键1（关闭屏幕）
+            if (e.KeyCode == Keys.D1 || e.KeyCode == Keys.NumPad1)
+            {
+                TurnOffScreen();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+            // 处理数字键2（锁屏并关闭屏幕）
+            else if (e.KeyCode == Keys.D2 || e.KeyCode == Keys.NumPad2)
+            {
+                LockAndTurnOffScreen();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+        }
     }
 }
