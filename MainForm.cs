@@ -142,6 +142,13 @@ namespace ScreenControl
         {
             try
             {
+                // 确保日志目录存在
+                string logDirectory = Path.GetDirectoryName(LogFilePath);
+                if (!string.IsNullOrEmpty(logDirectory) && !Directory.Exists(logDirectory))
+                {
+                    Directory.CreateDirectory(logDirectory);
+                }
+                
                 string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {operation}";
                 File.AppendAllText(LogFilePath, logEntry + Environment.NewLine);
             }
