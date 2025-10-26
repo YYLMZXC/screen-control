@@ -22,6 +22,9 @@
     <Content Include="screencontrol.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <EmbeddedResource Include="res\screencontrol.png">
+      <LogicalName>ScreenControl.res.screencontrol.png</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

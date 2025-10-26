@@ -177,7 +177,26 @@ namespace ScreenControl
 
         private void MainForm_Load_1(object sender, EventArgs e)
         {
-            // 加载时的初始化工作已在构造函数中完成
+            try
+            {
+                // 从嵌入式资源加载背景图片
+                using (Stream stream = typeof(MainForm).Assembly.GetManifestResourceStream("ScreenControl.res.screencontrol.png"))
+                {
+                    if (stream != null)
+                    {
+                        this.BackgroundImage = System.Drawing.Image.FromStream(stream);
+                        this.BackgroundImageLayout = ImageLayout.Stretch;
+                    }
+                    else
+                    {
+                        UpdateStatus("无法加载嵌入式背景图片资源");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                UpdateStatus($"加载背景图片失败：{ex.Message}");
+            }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
