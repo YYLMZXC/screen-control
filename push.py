@@ -13,7 +13,9 @@ def run_command(command):
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True
+            text=True,
+            encoding='utf-8',
+            errors='replace'
         )
         print(result.stdout)
         return True, result.stdout
@@ -23,8 +25,18 @@ def run_command(command):
         return False, e.stderr
 
 def main():
-    # 获取提交信息，如果没有提供则使用默认信息
+    # 获取提交信息和分支名称
     commit_message = sys.argv[1] if len(sys.argv) > 1 else f"更新于 {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    
+    # 获取当前分支名称
+    print("获取当前分支...")
+    success, branch_output = run_command("git rev-parse --abbrev-ref HEAD")
+    if not success:
+        print("获取分支名称失败，默认使用master")
+        branch_name = "master"
+    else:
+        branch_name = branch_output.strip()
+        print(f"当前分支: {branch_name}")
     
     # 检查git状态
     print("检查git状态...")
@@ -69,35 +81,35 @@ def main():
     if "gitee" not in output:
         success, _ = run_command(f"git remote add gitee {gitee_url}")
         if not success:
-            print("添加gitee远程失败")
+            print("添加gitee远程失败，但继续尝试")
     else:
         # 更新gitee远程URL
         success, _ = run_command(f"git remote set-url gitee {gitee_url}")
         if not success:
-            print("更新gitee远程URL失败")
+            print("更新gitee远程URL失败，但继续尝试")
     
     # 如果没有github远程，添加它
     if "github" not in output:
         success, _ = run_command(f"git remote add github {github_url}")
         if not success:
-            print("添加github远程失败")
+            print("添加github远程失败，但继续尝试")
     else:
         # 更新github远程URL
         success, _ = run_command(f"git remote set-url github {github_url}")
         if not success:
-            print("更新github远程URL失败")
+            print("更新github远程URL失败，但继续尝试")
     
     # 推送到Gitee
-    print("推送到Gitee...")
-    success, _ = run_command("git push gitee master")
+    print(f"推送到Gitee的{branch_name}分支...")
+    success, _ = run_command(f"git push gitee {branch_name}")
     if success:
         print("成功推送到Gitee")
     else:
         print("推送到Gitee失败")
     
     # 推送到GitHub
-    print("推送到GitHub...")
-    success, _ = run_command("git push github master")
+    print(f"推送到GitHub的{branch_name}分支...")
+    success, _ = run_command(f"git push github {branch_name}")
     if success:
         print("成功推送到GitHub")
     else:
