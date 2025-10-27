@@ -28,6 +28,14 @@ namespace ScreenControl
         private NotifyIcon notifyIcon; // 托盘图标
         private bool enableHotkeys = true; // 快捷键启用状态标志
         private int closeScreenDelay = 2; // 延迟关闭屏幕的秒数，默认x秒
+        
+        // 关闭屏幕快捷键设置
+        private int turnOffScreenKey = (int)Keys.D1;
+        private KeyModifier turnOffScreenModifier = KeyModifier.None;
+        
+        // 锁屏并关闭屏幕快捷键设置
+        private int lockScreenKey = (int)Keys.D2;
+        private KeyModifier lockScreenModifier = KeyModifier.None;
         private ContextMenuStrip trayMenu; // 托盘右键菜单
 
         public MainForm()
@@ -236,7 +244,11 @@ namespace ScreenControl
                 var settings = new
                 {
                     EnableHotkeys = enableHotkeys,
-                    CloseScreenDelay = closeScreenDelay
+                    CloseScreenDelay = closeScreenDelay,
+                    TurnOffScreenKey = turnOffScreenKey,
+                    TurnOffScreenModifier = (int)turnOffScreenModifier,
+                    LockScreenKey = lockScreenKey,
+                    LockScreenModifier = (int)lockScreenModifier
                 };
                 
                 // 序列化并保存到文件
@@ -273,6 +285,28 @@ namespace ScreenControl
                         if (settings.CloseScreenDelay != null)
                         {
                             closeScreenDelay = settings.CloseScreenDelay;
+                        }
+                        
+                        // 加载关闭屏幕快捷键
+                        if (settings.TurnOffScreenKey != null)
+                        {
+                            turnOffScreenKey = settings.TurnOffScreenKey;
+                        }
+                        
+                        if (settings.TurnOffScreenModifier != null)
+                        {
+                            turnOffScreenModifier = (KeyModifier)settings.TurnOffScreenModifier;
+                        }
+                        
+                        // 加载锁屏并关闭屏幕快捷键
+                        if (settings.LockScreenKey != null)
+                        {
+                            lockScreenKey = settings.LockScreenKey;
+                        }
+                        
+                        if (settings.LockScreenModifier != null)
+                        {
+                            lockScreenModifier = (KeyModifier)settings.LockScreenModifier;
                         }
                     }
                     
@@ -681,15 +715,30 @@ namespace ScreenControl
         {
             try
             {
-                // 注册数字键1（无修饰键）用于关闭屏幕
-                RegisterHotKey(this.Handle, HOTKEY_ID_TURNOFFSCREEN, 0, (int)Keys.D1);
-                RegisterHotKey(this.Handle, HOTKEY_ID_TURNOFFSCREEN, 0, (int)Keys.NumPad1);
+                // 注销现有热键，避免冲突
+                UnregisterGlobalHotkeys();
                 
-                // 注册数字键2（无修饰键）用于锁屏并关闭屏幕
-                RegisterHotKey(this.Handle, HOTKEY_ID_LOCKSCREEN, 0, (int)Keys.D2);
-                RegisterHotKey(this.Handle, HOTKEY_ID_LOCKSCREEN, 0, (int)Keys.NumPad2);
+                // 注册自定义关闭屏幕快捷键
+                RegisterHotKey(this.Handle, HOTKEY_ID_TURNOFFSCREEN, (int)turnOffScreenModifier, turnOffScreenKey);
                 
-                // 注册Alt+H用于打开帮助
+                // 如果是数字键，同时注册小键盘上的对应键
+                if (turnOffScreenKey >= (int)Keys.D0 && turnOffScreenKey <= (int)Keys.D9)
+                {
+                    int numPadKey = turnOffScreenKey - (int)Keys.D0 + (int)Keys.NumPad0;
+                    RegisterHotKey(this.Handle, HOTKEY_ID_TURNOFFSCREEN, (int)turnOffScreenModifier, numPadKey);
+                }
+                
+                // 注册自定义锁屏并关闭屏幕快捷键
+                RegisterHotKey(this.Handle, HOTKEY_ID_LOCKSCREEN, (int)lockScreenModifier, lockScreenKey);
+                
+                // 如果是数字键，同时注册小键盘上的对应键
+                if (lockScreenKey >= (int)Keys.D0 && lockScreenKey <= (int)Keys.D9)
+                {
+                    int numPadKey = lockScreenKey - (int)Keys.D0 + (int)Keys.NumPad0;
+                    RegisterHotKey(this.Handle, HOTKEY_ID_LOCKSCREEN, (int)lockScreenModifier, numPadKey);
+                }
+                
+                // 注册Alt+H用于打开帮助（保持默认）
                 RegisterHotKey(this.Handle, HOTKEY_ID_HELP, (int)KeyModifier.Alt, (int)Keys.H);
                 
                 LogOperation("全局热键已注册");
@@ -851,13 +900,28 @@ namespace ScreenControl
         private void btnSettings_Click(object sender, EventArgs e)
         {
             using (SettingsForm settingsForm = new SettingsForm(
-                enableHotkeys, closeScreenDelay))
+                enableHotkeys, closeScreenDelay, 
+                turnOffScreenKey, turnOffScreenModifier, lockScreenKey, lockScreenModifier))
             {
                 if (settingsForm.ShowDialog() == DialogResult.OK)
                 {
                     // 保存新的设置值
                     enableHotkeys = settingsForm.EnableHotkeys;
                     closeScreenDelay = settingsForm.CloseScreenDelay;
+                    turnOffScreenKey = settingsForm.TurnOffScreenKey;
+                    turnOffScreenModifier = settingsForm.TurnOffScreenModifier;
+                    lockScreenKey = settingsForm.LockScreenKey;
+                    lockScreenModifier = settingsForm.LockScreenModifier;
+                    
+                    // 重新注册热键
+                    if (enableHotkeys)
+                    {
+                        RegisterGlobalHotkeys();
+                    }
+                    else
+                    {
+                        UnregisterGlobalHotkeys();
+                    }
                     
                     SaveSettings();
                     UpdateStatus("设置已更新");
