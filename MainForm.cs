@@ -303,8 +303,8 @@ namespace ScreenControl
                 e.Handled = true;
                 e.SuppressKeyPress = true;
             }
-            // 处理H键（帮助）
-            else if (e.KeyCode == Keys.H && e.Alt)
+            // 处理Alt+H快捷键（打开帮助）
+            else if (e.Alt && e.KeyCode == Keys.H)
             {
                 ShowHelp();
                 e.Handled = true;
@@ -322,8 +322,8 @@ namespace ScreenControl
             // 创建帮助菜单
             ContextMenuStrip helpMenu = new ContextMenuStrip();
             
-            // 添加菜单项
-            ToolStripMenuItem aboutMenuItem = new ToolStripMenuItem("关于");
+            // 添加菜单项（使用&标记设置快捷键为A）
+            ToolStripMenuItem aboutMenuItem = new ToolStripMenuItem("关于(&A)");
             aboutMenuItem.Click += AboutMenuItem_Click;
             
             // 将菜单项添加到菜单

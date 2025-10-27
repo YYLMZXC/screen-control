@@ -66,12 +66,16 @@ namespace ScreenControl
             // 
             // btnHelp
             // 
-            this.btnHelp.Location = new System.Drawing.Point(100, 230);
+            this.btnHelp.Location = new System.Drawing.Point(530, 310);
             this.btnHelp.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.btnHelp.Name = "btnHelp";
-            this.btnHelp.Size = new System.Drawing.Size(150, 50);
+            this.btnHelp.Size = new System.Drawing.Size(50, 30);
             this.btnHelp.TabIndex = 3;
-            this.btnHelp.Text = "帮助(&H)";
+            this.btnHelp.Text = "?";
+            this.btnHelp.Font = new System.Drawing.Font("Microsoft YaHei UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.btnHelp.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnHelp.ForeColor = System.Drawing.Color.RoyalBlue;
+            this.btnHelp.Cursor = System.Windows.Forms.Cursors.Help;
             this.btnHelp.UseVisualStyleBackColor = true;
             this.btnHelp.Click += new System.EventHandler(this.btnHelp_Click);
             
