@@ -8,7 +8,9 @@ namespace ScreenControl
     public partial class MainForm : Form
     {
         private System.Windows.Forms.Timer monitorTimer;
+        private System.Windows.Forms.Timer uptimeTimer;
         private DateTime screenOffTime;
+        private DateTime startTime;
         private bool isScreenOff = false;
         private const string LogFilePath = "bugs/screencontrol.log";
         private Label statusLabel; // 用于显示状态信息的标签
@@ -17,9 +19,19 @@ namespace ScreenControl
         {
             InitializeComponent();
             InitializeMonitorTimer();
+            InitializeUptimeTimer();
             InitializeStatusLabel();
-            LogOperation("应用程序启动");
+            startTime = DateTime.Now;
+            LogOperation($"应用程序启动，启动时间：{startTime:yyyy-MM-dd HH:mm:ss}");
             UpdateStatus("应用程序已启动，就绪");
+        }
+
+        private void InitializeUptimeTimer()
+        {
+            uptimeTimer = new System.Windows.Forms.Timer();
+            uptimeTimer.Interval = 1000; // 每秒更新一次界面显示
+            uptimeTimer.Tick += UptimeTimer_Tick;
+            uptimeTimer.Start();
         }
 
         private void InitializeMonitorTimer()
@@ -233,10 +245,32 @@ namespace ScreenControl
             }
         }
 
+        private int logCounter = 0; // 用于控制日志记录频率
+
+        private void UptimeTimer_Tick(object sender, EventArgs e)
+        {
+            // 计算运行时间
+            TimeSpan uptime = DateTime.Now - startTime;
+            string uptimeMessage = $"稳定运行时间：{uptime.Days}天{uptime.Hours:00}:{uptime.Minutes:00}:{uptime.Seconds:00}";
+            
+            // 每秒更新界面显示
+            UpdateStatus(uptimeMessage);
+            
+            // 每分钟记录一次日志（避免日志文件过大）
+            logCounter++;
+            if (logCounter >= 60)
+            {
+                string detailedMessage = $"应用程序运行时间：{uptime.TotalHours:F2}小时（{uptime.Days}天{uptime.Hours}小时{uptime.Minutes}分钟{uptime.Seconds}秒）";
+                LogOperation(detailedMessage);
+                logCounter = 0;
+            }
+        }
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             base.OnFormClosing(e);
             monitorTimer.Stop();
+            uptimeTimer.Stop();
             
             // 恢复正常电源状态
             if (isScreenOff)
@@ -244,7 +278,10 @@ namespace ScreenControl
                 SetThreadExecutionState(ES_CONTINUOUS);
             }
             
-            LogOperation("应用程序关闭");
+            // 记录总运行时间
+            TimeSpan totalUptime = DateTime.Now - startTime;
+            string shutdownMessage = $"应用程序关闭，总运行时间：{totalUptime.TotalHours:F2}小时（{totalUptime.Days}天{totalUptime.Hours}小时{totalUptime.Minutes}分钟{totalUptime.Seconds}秒）";
+            LogOperation(shutdownMessage);
         }
 
         private void MainForm_KeyDown(object sender, KeyEventArgs e)
