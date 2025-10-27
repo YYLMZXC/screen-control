@@ -173,35 +173,35 @@ namespace ScreenControl
         {            
             try
             {                
-                // 优化窗口显示顺序，确保窗口完全可见
-                // 先设置窗口状态
-                if (this.WindowState == FormWindowState.Minimized)
-                {                    
-                    this.WindowState = FormWindowState.Normal;
-                }
+                // 清除手动隐藏标志
+                isWindowManuallyHidden = false;
                 
-                // 显示窗口
-                this.Visible = true;
+                // 强制设置窗口状态为正常，确保不是最小化
+                this.WindowState = FormWindowState.Normal;
+                
+                // 先确保任务栏图标可见，然后显示窗口
                 this.ShowInTaskbar = true;
+                this.Visible = true;
                 
-                // 连续调用多个方法确保窗口前置并获得焦点
-                // 先激活窗口
+                // 强制激活窗口
                 this.Activate();
                 
-                // 设置为前台窗口（API调用）
+                // 使用API设置为前台窗口
                 SetForegroundWindow(this.Handle);
                 
                 // 确保窗口在最前面
-                this.TopMost = true;
                 this.BringToFront();
                 
-                // 移除TopMost属性，避免窗口一直置顶
+                // 短暂设置为TopMost然后清除，确保窗口在最前面
+                this.TopMost = true;
+                this.Refresh();
+                Application.DoEvents();
                 this.TopMost = false;
                 
                 // 确保窗口获得焦点
                 this.Focus();
                 
-                LogOperation("窗口已从托盘恢复显示并前置");
+                LogOperation("窗口已显示并前置");
             }
             catch (Exception ex)
             {                
@@ -209,14 +209,15 @@ namespace ScreenControl
             }
         }
         
-        // 切换窗口显示状态（用于任务栏点击）
+        // 切换窗口显示状态（用于菜单点击等）
         private void ToggleWindowVisibility()
         {            
             if (this.Visible && this.WindowState != FormWindowState.Minimized)
             {                
                 // 如果窗口可见且未最小化，隐藏它但保持任务栏图标
                 this.Visible = false;
-                LogOperation("窗口已隐藏（通过任务栏点击）");
+                isWindowManuallyHidden = true;
+                LogOperation("窗口已隐藏（通过菜单点击）");
             }
             else
             {                
@@ -585,8 +586,13 @@ namespace ScreenControl
             // 当窗口最小化时，隐藏窗口并显示托盘图标
             if (this.WindowState == FormWindowState.Minimized)
             {                
+                // 设置最小化标志，不是手动隐藏
+                isWindowManuallyHidden = false;
+                
                 // 隐藏窗口但保持任务栏图标可见（用于点击切换）
                 this.Visible = false;
+                // 确保任务栏图标保持可见
+                this.ShowInTaskbar = true;
                 
                 // 确保托盘图标可见
                 notifyIcon.Visible = true;
@@ -595,7 +601,7 @@ namespace ScreenControl
                 try
                 {                    
                     // 显示提示气泡
-                    notifyIcon.ShowBalloonTip(3000, "屏幕控制", "程序已最小化到托盘，双击托盘图标恢复窗口", ToolTipIcon.Info);
+                    notifyIcon.ShowBalloonTip(3000, "屏幕控制", "程序已最小化到托盘，双击托盘图标或点击任务栏图标恢复窗口", ToolTipIcon.Info);
                 }
                 catch (Exception ex)
                 {                    
@@ -604,32 +610,64 @@ namespace ScreenControl
             }
         }
         
+        // 添加一个标志来跟踪窗口是否被主动隐藏（非最小化状态）
+        private bool isWindowManuallyHidden = false;
+        
         // 窗口消息处理，用于捕获任务栏按钮点击
         protected override void WndProc(ref Message m)
         {            
             const int WM_SYSCOMMAND = 0x0112;
             const int SC_RESTORE = 0xF120;
+            const int SC_MINIMIZE = 0xF020;
+            const int SC_CLOSE = 0xF060;
             const int WM_ACTIVATEAPP = 0x001C;
             const int WM_ACTIVATE = 0x0006;
             
             // 处理系统命令消息（包括任务栏点击）
             if (m.Msg == WM_SYSCOMMAND)
             {                
-                // 处理恢复窗口命令
-                if (m.WParam.ToInt32() == SC_RESTORE)
+                // 从消息的低16位提取命令
+                int wparam = m.WParam.ToInt32();
+                int cmd = wparam & 0xFFF0; // 清除低位的标志位
+                
+                // 处理最小化命令 - 只在窗口正常状态下处理
+                if (cmd == SC_MINIMIZE && this.WindowState == FormWindowState.Normal)
                 {                    
-                    ToggleWindowVisibility();
-                    return; // 阻止默认处理
+                    // 让系统正常处理最小化，我们会在OnResize中捕获
+                    base.WndProc(ref m);
+                    return;
+                }
+                // 处理恢复窗口命令（来自任务栏点击）
+                else if (cmd == SC_RESTORE)
+                {                    
+                    // 当窗口不可见（无论是手动隐藏还是最小化隐藏）时，显示窗口
+                    if (!this.Visible)
+                    {                        
+                        // 直接显示主窗口，不切换状态
+                        ShowMainForm();
+                        return; // 阻止默认处理
+                    }
                 }
             }
             
-            // 处理应用程序激活消息
-            else if (m.Msg == WM_ACTIVATEAPP || m.Msg == WM_ACTIVATE)
+            // 处理应用程序激活消息 - 这通常来自任务栏点击
+            else if (m.Msg == WM_ACTIVATEAPP)
             {                
-                // 当通过任务栏点击激活时
-                if (!this.Visible && (m.Msg == WM_ACTIVATEAPP && m.WParam.ToInt32() == 1))
+                // 当通过任务栏点击激活应用程序，并且窗口当前是隐藏状态
+                if (m.WParam.ToInt32() == 1 && !this.Visible)
                 {                    
-                    ToggleWindowVisibility();
+                    // 直接显示主窗口，不切换状态
+                    ShowMainForm();
+                }
+            }
+            else if (m.Msg == WM_ACTIVATE)
+            {                
+                // 当窗口接收到激活消息，确保窗口是可见的
+                int wparam = m.WParam.ToInt32();
+                // 如果是激活消息（wparam != 0）并且窗口当前被隐藏
+                if (wparam != 0 && !this.Visible)
+                {                    
+                    ShowMainForm();
                 }
             }
             
