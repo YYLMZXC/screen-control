@@ -19,21 +19,15 @@ namespace ScreenControl
         private bool isScreenOff = false;
         private const string LogFilePath = "bugs/screencontrol.log";
         private const string SettingsFilePath = "settings.json";
-        private const string Version = "1.5.1";
+        private const string Version = "1.6.0";
         private const string GiteeUrl = "https://gitee.com/yylmzxc/screen-control";
         private const string GithubUrl = "https://github.com/YYLMZXC/screen-control";
-
-
-
-
-
-
 
         private Label statusLabel; // 用于显示状态信息的标签
         private Label uptimeLabel; // 用于显示运行时间的标签
         private NotifyIcon notifyIcon; // 托盘图标
         private bool enableHotkeys = true; // 快捷键启用状态标志
-        private int closeScreenDelay = 5; // 延迟关闭屏幕的秒数，默认5秒
+        private int closeScreenDelay = 2; // 延迟关闭屏幕的秒数，默认x秒
         private ContextMenuStrip trayMenu; // 托盘右键菜单
 
         public MainForm()
@@ -46,9 +40,7 @@ namespace ScreenControl
             
             // 加载设置
             LoadSettings();
-            
-
-            
+                       
             startTime = DateTime.Now;
             LogOperation($"应用程序启动，启动时间：{startTime:yyyy-MM-dd HH:mm:ss}");
             UpdateStatus("应用程序已启动，就绪");
@@ -234,9 +226,7 @@ namespace ScreenControl
                 ShowMainForm();
             }
         }
-        
-
-        
+              
         // 保存设置
         private void SaveSettings()
         {
@@ -384,9 +374,7 @@ namespace ScreenControl
         private const int MONITOR_OFF = 2;
         private const int MONITOR_ON = -1;
         private const int MONITOR_STANDBY = 1;
-        
-
-        
+              
         // 检查系统是否被唤醒（屏幕是否开启）
         private bool IsSystemAwake()
         {            
@@ -542,8 +530,7 @@ namespace ScreenControl
                 SetThreadExecutionState(ES_CONTINUOUS);
                 
                 // 运行时间计时器不需要在此处停止和重启，因为运行时间计算完全基于startTime
-                // 计时器的作用只是更新UI显示和记录日志，不会影响实际的运行时间计算
-                
+                // 计时器的作用只是更新UI显示和记录日志，不会影响实际的运行时间计算        
                 // 重置日志计数器，确保屏幕唤醒后立即开始计时记录
                 logCounter = 0;
                 
