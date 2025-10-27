@@ -138,8 +138,9 @@ namespace ScreenControl
             Task.Run(async () => {
                 try
                 {
-                    // 创建版本文件夹
-                    string versionFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ScreenControl", "Updates", _version);
+                    // 创建版本文件夹（在当前程序目录下）
+                    string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                    string versionFolder = Path.Combine(appDirectory, "UpdateDownloader", _version);
                     Directory.CreateDirectory(versionFolder);
                     
                     // 下载文件路径
@@ -163,7 +164,7 @@ namespace ScreenControl
                         
                         // 显示下载完成提示
                         DialogResult result = MessageBox.Show(
-                            $"文件 {fileName} 下载完成！\n保存位置: {filePath}\n\n是否打开文件位置？", 
+                            $"文件 {fileName} 下载完成！\n保存位置: {Path.GetDirectoryName(filePath)}\n\n是否打开文件位置？", 
                             "下载完成", 
                             MessageBoxButtons.YesNo, 
                             MessageBoxIcon.Information);
