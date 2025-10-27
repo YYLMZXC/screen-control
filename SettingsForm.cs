@@ -311,7 +311,7 @@ namespace ScreenControl
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "SettingsForm";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "屏幕控制设置";
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
