@@ -370,9 +370,7 @@ namespace ScreenControl
             }
         }
 
-        // 立即关闭屏幕
-        [DllImport("user32.dll")]
-        private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+     
 
         // 锁屏
         [DllImport("user32.dll")]
@@ -387,30 +385,11 @@ namespace ScreenControl
         [DllImport("user32.dll")]
         private static extern IntPtr GetDesktopWindow();
 
-        // 获取系统电源状态
-        [DllImport("user32.dll")]
-        private static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
+        
 
-        // 防止系统睡眠
-        [DllImport("kernel32.dll")]
-        private static extern uint SetThreadExecutionState(uint esFlags);
+       
+     
 
-        // 电源管理常量
-        private const uint ES_CONTINUOUS = 0x80000000;
-        private const uint ES_DISPLAY_REQUIRED = 0x00000002;
-        private const uint ES_SYSTEM_REQUIRED = 0x00000001;
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct LASTINPUTINFO
-        {
-            public uint cbSize;
-            public uint dwTime;
-        }
-
-        private const uint WM_SYSCOMMAND = 0x0112;
-        private const uint SC_MONITORPOWER = 0xF170;
-        private const int MONITOR_OFF = 2;
-        private const int HWND_BROADCAST = 0xFFFF;  // 广播消息到所有窗口
               
         // 检查系统是否被唤醒（屏幕是否开启）
         private bool IsSystemAwake()
@@ -475,15 +454,7 @@ namespace ScreenControl
                 lastMouseMoveTime = DateTime.MinValue;
                 isScreenOff = true;
                 
-                // 重要：首先清除之前的任何电源设置，重置为默认状态
-                SetThreadExecutionState(ES_CONTINUOUS);
-                LogOperation("已重置电源状态");
-                
-                // 然后设置新的电源状态：
-                // ES_CONTINUOUS: 使设置持续有效
-                // 移除ES_DISPLAY_REQUIRED以允许屏幕关闭
-                uint state = SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
-                LogOperation($"设置系统保持活跃状态，返回值: {state}");
+              
                 
                 // 获取系统目录路径
                 string windowsDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
@@ -515,14 +486,7 @@ namespace ScreenControl
                 {
                     LogOperation($"未找到屏幕保护程序: {scrnsavePath}");
                 }
-                
-                // 如果屏幕保护程序启动失败，回退到使用SendMessage方法
-                if (!screenSaverStarted)
-                {
-                    LogOperation("回退到使用SendMessage方法关闭屏幕");
-                    IntPtr result = SendMessage((IntPtr)HWND_BROADCAST, WM_SYSCOMMAND, (IntPtr)SC_MONITORPOWER, (IntPtr)MONITOR_OFF);
-                    LogOperation($"已发送关闭屏幕消息到所有窗口，返回值: {result}");
-                }
+              
                 
                 // 启动监控计时器
                 monitorTimer.Start();
@@ -543,26 +507,21 @@ namespace ScreenControl
         {
             try
             {
-                // 先锁屏
+                // 记录操作
+                LogOperation("开始执行锁屏并关闭屏幕操作");
+                
+                // 先执行锁屏操作
+                LogOperation("执行锁屏操作");
                 LockWorkStation();
                 LogOperation("系统已锁屏");
-
-                // 减少等待时间，确保锁屏完成但不会过长
+                
+                // 等待锁屏完成
                 System.Threading.Thread.Sleep(1000);
-
-                // 直接使用SendMessage方法关闭屏幕
-                LogOperation("锁屏后发送关闭屏幕消息");
-                IntPtr result = SendMessage((IntPtr)HWND_BROADCAST, WM_SYSCOMMAND, (IntPtr)SC_MONITORPOWER, (IntPtr)MONITOR_OFF);
-                LogOperation($"锁屏后发送关闭屏幕消息，返回值: {result}");
                 
-                // 记录屏幕关闭状态
+             
+                
+                // 更新状态信息
                 screenOffTime = DateTime.Now;
-                lastMouseMoveTime = DateTime.MinValue;
-                isScreenOff = true;
-                
-                // 启动监控计时器
-                monitorTimer.Start();
-                
                 string message = $"系统已锁屏并关闭屏幕，时间：{screenOffTime:yyyy-MM-dd HH:mm:ss}";
                 LogOperation(message);
                 UpdateStatus(message);
@@ -572,6 +531,7 @@ namespace ScreenControl
                 string errorMsg = $"锁屏并关闭屏幕失败：{ex.Message}";
                 UpdateStatus(errorMsg);
                 LogOperation(errorMsg);
+                MessageBox.Show(errorMsg, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -625,12 +585,7 @@ namespace ScreenControl
                 monitorTimer.Stop();
                 isScreenOff = false;
                 
-                // 恢复正常电源状态
-                SetThreadExecutionState(ES_CONTINUOUS);
-                
-                // 运行时间计时器不需要在此处停止和重启，因为运行时间计算完全基于startTime
-                // 计时器的作用只是更新UI显示和记录日志，不会影响实际的运行时间计算        
-                // 重置日志计数器，确保屏幕唤醒后立即开始计时记录
+           
                 logCounter = 0;
                 
                 string message = $"屏幕已唤醒，关闭时长：{duration.TotalMinutes:F2}分钟（{duration.Hours}小时{duration.Minutes}分钟{duration.Seconds}秒）";
@@ -643,8 +598,7 @@ namespace ScreenControl
         {
             try
             {
-                // 加载设置后更新快捷键开关状态
-                // 已将快捷键开关移至设置界面
+               
                 
                 // 从嵌入式资源加载背景图片
                 using (Stream stream = typeof(MainForm).Assembly.GetManifestResourceStream("ScreenControl.res.screencontrol.png"))
@@ -750,11 +704,7 @@ namespace ScreenControl
                 notifyIcon.Dispose();
             }
             
-            // 恢复正常电源状态
-            if (isScreenOff)
-            {
-                SetThreadExecutionState(ES_CONTINUOUS);
-            }
+          
             
             // 记录总运行时间
             TimeSpan totalUptime = DateTime.Now - startTime;
