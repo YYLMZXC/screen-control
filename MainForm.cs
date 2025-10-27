@@ -23,15 +23,11 @@ namespace ScreenControl
         private const string GithubUrl = "https://github.com/YYLMZXC/screen-control";
 
         // 可配置的时间参数
-        // screenOffInitialDelay：屏蔽期——屏幕刚关时"装死"多久（毫秒）
-        private int screenOffInitialDelay = 12000; // 屏幕关闭后的初始化延迟（12秒）
-        
         // idleTimeThreshold：活动判定期——多长的空闲算"有人回来了"（毫秒）
         private int idleTimeThreshold = 500; // 空闲时间阈值（0.5秒，用于鼠标活动检测）
         
-        // delayWakeUpDuration：确认期——发现活动后，再观察多久才"真的开屏"（毫秒）
-        private int delayWakeUpDuration = 5000; // 延迟唤醒检测的持续时间（5秒，用于鼠标确认期）
-        // 实现逻辑："先装死 screenOffInitialDelay → 用 idleTimeThreshold 阈值判断有没有人 → 有人就再观察 delayWakeUpDuration 秒 → 才给开屏"
+        // delayWakeUpDuration：保留参数（暂时未使用）
+        private int delayWakeUpDuration = 5000;
 
 
 
@@ -267,7 +263,7 @@ namespace ScreenControl
                     DelayWakeUpEnabled = chkDelayWakeUp?.Checked ?? true,
                     EnableHotkeys = enableHotkeys,
                     IdleTimeThreshold = idleTimeThreshold,
-                    ScreenOffInitialDelay = screenOffInitialDelay,
+        
                     DelayWakeUpDuration = delayWakeUpDuration
                 };
                 
@@ -275,7 +271,7 @@ namespace ScreenControl
                 string settingsJson = Newtonsoft.Json.JsonConvert.SerializeObject(settings);
                 File.WriteAllText(SettingsFilePath, settingsJson);
                 
-                LogOperation($"设置已保存：空闲阈值={idleTimeThreshold}ms, 初始延迟={screenOffInitialDelay}ms, 唤醒延迟={delayWakeUpDuration}ms");
+                LogOperation($"设置已保存：空闲阈值={idleTimeThreshold}ms, 唤醒延迟={delayWakeUpDuration}ms");
             }
             catch (Exception ex)
             {
@@ -313,10 +309,7 @@ namespace ScreenControl
                             idleTimeThreshold = Convert.ToInt32(settings.IdleTimeThreshold);
                         }
                         
-                        if (settings.ScreenOffInitialDelay != null)
-                        {
-                            screenOffInitialDelay = Convert.ToInt32(settings.ScreenOffInitialDelay);
-                        }
+
                         
                         if (settings.DelayWakeUpDuration != null)
                         {
@@ -324,7 +317,7 @@ namespace ScreenControl
                         }
                     }
                     
-                    LogOperation($"设置已加载：空闲阈值={idleTimeThreshold}ms, 初始延迟={screenOffInitialDelay}ms, 唤醒延迟={delayWakeUpDuration}ms");
+                    LogOperation($"设置已加载：空闲阈值={idleTimeThreshold}ms, 唤醒延迟={delayWakeUpDuration}ms");
                 }
             }
             catch (Exception ex)
@@ -430,13 +423,6 @@ namespace ScreenControl
         // 检查系统是否被唤醒（屏幕是否开启）
         private bool IsSystemAwake()
         {
-            // 首先检查是否在屏幕关闭的初始化延迟期内
-            if (isScreenOff && (DateTime.Now - screenOffInitialTime).TotalMilliseconds < screenOffInitialDelay)
-            {
-                LogOperation($"初始化延迟期内，忽略唤醒检测（{screenOffInitialDelay}ms）");
-                return false;
-            }
-            
             LASTINPUTINFO lastInputInfo = new LASTINPUTINFO();
             lastInputInfo.cbSize = (uint)Marshal.SizeOf(lastInputInfo);
             GetLastInputInfo(ref lastInputInfo);
@@ -454,15 +440,12 @@ namespace ScreenControl
             return false;
         }
 
-        private DateTime screenOffInitialTime; // 记录屏幕关闭的初始化时间
-
         private void TurnOffScreen()
         {
             try
             {
                 // 记录屏幕关闭时间
                 screenOffTime = DateTime.Now;
-                screenOffInitialTime = DateTime.Now; // 记录初始化时间用于延迟检测
                 lastMouseMoveTime = DateTime.MinValue;
                 isScreenOff = true;
                 
@@ -905,7 +888,6 @@ namespace ScreenControl
         {
             using (SettingsForm settingsForm = new SettingsForm(
                 idleTimeThreshold, 
-                screenOffInitialDelay, 
                 delayWakeUpDuration,
                 enableHotkeys, 
                 chkDelayWakeUp?.Checked ?? true))
@@ -914,7 +896,7 @@ namespace ScreenControl
                 {
                     // 保存新的设置值
                     idleTimeThreshold = settingsForm.IdleTimeThreshold;
-                    screenOffInitialDelay = settingsForm.ScreenOffInitialDelay;
+
                     delayWakeUpDuration = settingsForm.DelayWakeUpDuration;
                     enableHotkeys = settingsForm.EnableHotkeys;
                     
@@ -925,7 +907,7 @@ namespace ScreenControl
                     
                     SaveSettings();
                     UpdateStatus("设置已更新");
-                    LogOperation($"用户通过界面更新设置：空闲阈值={idleTimeThreshold}ms, 初始延迟={screenOffInitialDelay}ms, 唤醒延迟={delayWakeUpDuration}ms");
+                    LogOperation($"用户通过界面更新设置：空闲阈值={idleTimeThreshold}ms, 唤醒延迟={delayWakeUpDuration}ms");
                 }
             }
         }

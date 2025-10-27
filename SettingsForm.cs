@@ -7,18 +7,18 @@ namespace ScreenControl
     {
         // 公共属性，供父窗体访问设置值
         public int IdleTimeThreshold { get; private set; }
-        public int ScreenOffInitialDelay { get; private set; }
+
         public int DelayWakeUpDuration { get; private set; }
         public bool EnableHotkeys { get; private set; }
         public bool DelayWakeUpEnabled { get; private set; }
 
-        public SettingsForm(int idleTimeThreshold, int screenOffInitialDelay, int delayWakeUpDuration, bool enableHotkeys, bool delayWakeUpEnabled)
+        public SettingsForm(int idleTimeThreshold, int delayWakeUpDuration, bool enableHotkeys, bool delayWakeUpEnabled)
         {
             InitializeComponent();
             
             // 初始化设置值
             IdleTimeThreshold = idleTimeThreshold;
-            ScreenOffInitialDelay = screenOffInitialDelay;
+
             DelayWakeUpDuration = delayWakeUpDuration;
             EnableHotkeys = enableHotkeys;
             DelayWakeUpEnabled = delayWakeUpEnabled;
@@ -31,7 +31,7 @@ namespace ScreenControl
         {
             // 设置数值输入控件的值
             txtIdleTimeThreshold.Text = (IdleTimeThreshold / 1000).ToString(); // 显示为秒
-            txtScreenOffInitialDelay.Text = (ScreenOffInitialDelay / 1000).ToString(); // 显示为秒
+
             txtDelayWakeUpDuration.Text = (DelayWakeUpDuration / 1000).ToString(); // 显示为秒
             
             // 设置复选框状态
@@ -69,13 +69,7 @@ namespace ScreenControl
                 IdleTimeThreshold = idleTimeSeconds * 1000;
                 
                 // 验证并保存屏幕关闭初始延迟（秒转毫秒）
-                int initialDelaySeconds = int.Parse(txtScreenOffInitialDelay.Text);
-                if (initialDelaySeconds < 0 || initialDelaySeconds > 60)
-                {
-                    MessageBox.Show("屏幕关闭初始延迟必须在0-60秒之间", "输入错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return false;
-                }
-                ScreenOffInitialDelay = initialDelaySeconds * 1000;
+    
                 
                 // 验证并保存延迟唤醒持续时间（秒转毫秒）
                 int wakeUpDelaySeconds = int.Parse(txtDelayWakeUpDuration.Text);
@@ -113,7 +107,7 @@ namespace ScreenControl
         private Label label1;
         private TextBox txtIdleTimeThreshold;
         private Label label2;
-        private TextBox txtScreenOffInitialDelay;
+
         private Label label3;
         private TextBox txtDelayWakeUpDuration;
         private CheckBox chkDelayWakeUp;
@@ -138,15 +132,15 @@ namespace ScreenControl
         {
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.label7 = new System.Windows.Forms.Label();
-            this.label6 = new System.Windows.Forms.Label();
+
             this.label5 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
             this.chkDelayWakeUp = new System.Windows.Forms.CheckBox();
             this.chkEnableHotkeys = new System.Windows.Forms.CheckBox();
             this.txtDelayWakeUpDuration = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
-            this.txtScreenOffInitialDelay = new System.Windows.Forms.TextBox();
-            this.label2 = new System.Windows.Forms.Label();
+
+
             this.txtIdleTimeThreshold = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.btnOK = new System.Windows.Forms.Button();
@@ -157,15 +151,15 @@ namespace ScreenControl
             // groupBox1
             // 
             this.groupBox1.Controls.Add(this.label7);
-            this.groupBox1.Controls.Add(this.label6);
+
             this.groupBox1.Controls.Add(this.label5);
             this.groupBox1.Controls.Add(this.label4);
             this.groupBox1.Controls.Add(this.chkDelayWakeUp);
             this.groupBox1.Controls.Add(this.chkEnableHotkeys);
             this.groupBox1.Controls.Add(this.txtDelayWakeUpDuration);
             this.groupBox1.Controls.Add(this.label3);
-            this.groupBox1.Controls.Add(this.txtScreenOffInitialDelay);
-            this.groupBox1.Controls.Add(this.label2);
+
+
             this.groupBox1.Controls.Add(this.txtIdleTimeThreshold);
             this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Location = new System.Drawing.Point(12, 12);
@@ -183,14 +177,7 @@ namespace ScreenControl
             this.label7.Size = new System.Drawing.Size(29, 15);
             this.label7.TabIndex = 11;
             this.label7.Text = "秒";
-            // 
-            // label6
-            // 
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(110, 120);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(29, 15);
-            this.label6.TabIndex = 10;
+
             this.label6.Text = "秒";
             // 
             // label5
@@ -246,21 +233,8 @@ namespace ScreenControl
             this.label3.Size = new System.Drawing.Size(128, 15);
             this.label3.TabIndex = 4;
             this.label3.Text = "延迟唤醒持续时间：";
-            // 
-            // txtScreenOffInitialDelay
-            // 
-            this.txtScreenOffInitialDelay.Location = new System.Drawing.Point(140, 115);
-            this.txtScreenOffInitialDelay.Name = "txtScreenOffInitialDelay";
-            this.txtScreenOffInitialDelay.Size = new System.Drawing.Size(50, 25);
-            this.txtScreenOffInitialDelay.TabIndex = 3;
-            // 
-            // label2
-            // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(6, 120);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(128, 15);
-            this.label2.TabIndex = 2;
+
+
             this.label2.Text = "屏幕关闭初始延迟：";
             // 
             // txtIdleTimeThreshold
