@@ -373,7 +373,6 @@ namespace ScreenControl
             descriptionLabel.Text = "屏幕控制是一款简单实用的工具，支持快速关闭屏幕和锁屏并关闭屏幕功能。\n\n快捷键：\n1 - 关闭屏幕\n2 - 锁屏并关闭屏幕\nAlt+H - 帮助菜单";
             descriptionLabel.TextAlign = System.Drawing.ContentAlignment.TopLeft;
             descriptionLabel.AutoSize = false;
-            descriptionLabel.Multiline = true;
             
             // 添加关闭按钮
             Button closeButton = new Button();
