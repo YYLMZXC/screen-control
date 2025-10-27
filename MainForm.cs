@@ -434,36 +434,93 @@ namespace ScreenControl
         {
             try
             {
-                // 记录屏幕关闭时间并重置鼠标移动时间
+                // 记录屏幕关闭时间和状态
                 screenOffTime = DateTime.Now;
-                lastMouseMoveTime = DateTime.MinValue;
-                isScreenOff = true;
                 
-                // 发送消息关闭屏幕
-                SendMessage(this.Handle, WM_SYSCOMMAND, (IntPtr)SC_MONITORPOWER, (IntPtr)MONITOR_OFF);
-                
-                // 设置线程执行状态，防止系统睡眠但允许显示关闭
-                SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
-                
-                // 启动监控计时器
-                monitorTimer.Start();
-                
-                // 确保运行时间计时器继续运行（显式确认，防止任何隐含停止）
-                if (!uptimeTimer.Enabled)
+                // 使用单独的方法来执行可能会卡死的操作，并设置超时
+                bool completed = ExecuteWithTimeout(() =>
                 {
-                    uptimeTimer.Start();
-                    LogOperation("已确保运行时间计时器继续运行");
-                }
+                    // 重置鼠标移动时间
+                    lastMouseMoveTime = DateTime.MinValue;
+                    
+                    // 无论屏幕当前状态如何，都尝试关闭屏幕
+                    // 使用SendMessage超时保护版本
+                    SendMessageTimeout(this.Handle, WM_SYSCOMMAND, (IntPtr)SC_MONITORPOWER, (IntPtr)MONITOR_OFF);
+                    
+                    // 设置线程执行状态，防止系统睡眠但允许显示关闭
+                    SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
+                }, 2000); // 2秒超时
                 
-                string message = $"屏幕已关闭，时间：{screenOffTime:yyyy-MM-dd HH:mm:ss}";
-                LogOperation(message);
-                UpdateStatus(message);
+                if (completed)
+                {
+                    // 记录屏幕关闭状态
+                    isScreenOff = true;
+                    
+                    // 启动监控计时器
+                    if (!monitorTimer.Enabled)
+                    {
+                        monitorTimer.Start();
+                    }
+                    
+                    // 确保运行时间计时器继续运行
+                    if (!uptimeTimer.Enabled)
+                    {
+                        uptimeTimer.Start();
+                    }
+                    
+                    string message = $"屏幕关闭命令已发送，时间：{screenOffTime:yyyy-MM-dd HH:mm:ss}";
+                    LogOperation(message);
+                    UpdateStatus(message);
+                }
+                else
+                {
+                    // 重置状态标志，避免卡死状态
+                    isScreenOff = false;
+                    
+                    string message = "屏幕关闭操作超时，可能与其他程序冲突";
+                    LogOperation(message);
+                    UpdateStatus(message);
+                }
             }
             catch (Exception ex)
             {
-                string errorMsg = $"关闭屏幕失败：{ex.Message}";
+                // 重置状态标志，避免卡死状态
+                isScreenOff = false;
+                
+                string errorMsg = $"关闭屏幕时发生错误：{ex.Message}";
                 UpdateStatus(errorMsg);
                 LogOperation(errorMsg);
+            }
+        }
+        
+        // 带有超时保护的SendMessage方法
+        private void SendMessageTimeout(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam, int timeoutMs = 1000)
+        {
+            try
+            {
+                // 创建一个委托来执行SendMessage
+                Action sendAction = () => SendMessage(hWnd, Msg, wParam, lParam);
+                
+                // 使用Task.Run和Task.Wait设置超时
+                Task.Run(sendAction).Wait(timeoutMs);
+            }
+            catch (Exception ex)
+            {
+                LogOperation($"SendMessage操作超时或失败：{ex.Message}");
+            }
+        }
+        
+        // 通用的超时执行方法
+        private bool ExecuteWithTimeout(Action action, int timeoutMs)
+        {
+            try
+            {
+                Task task = Task.Run(action);
+                return task.Wait(timeoutMs);
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
 
@@ -471,19 +528,50 @@ namespace ScreenControl
         {
             try
             {
-                // 先锁屏
-                LockWorkStation();
-                LogOperation("系统已锁屏");
-
-                // 等待一段时间，确保锁屏完成
-                System.Threading.Thread.Sleep(1000);
-
-                // 然后关闭屏幕
-                TurnOffScreen();
+                // 用于跟踪锁屏是否成功的标志
+                bool[] lockSuccess = new bool[] { true }; // 使用数组引用传递
+                
+                // 使用超时保护执行锁屏操作
+                bool completed = ExecuteWithTimeout(() =>
+                {
+                    try
+                    {
+                        // 先锁屏
+                        LockWorkStation();
+                        LogOperation("系统已锁屏");
+                    }
+                    catch (Exception ex)
+                    {
+                        LogOperation($"锁屏操作失败：{ex.Message}");
+                        lockSuccess[0] = false;
+                    }
+                }, 3000); // 3秒超时
+                
+                if (completed && lockSuccess[0])
+                {
+                    // 使用单独的Task执行短暂延迟，避免UI线程阻塞
+                    Task.Run(async () =>
+                    {
+                        // 短暂延迟后关闭屏幕
+                        await Task.Delay(1000);
+                        
+                        // 调用关闭屏幕方法
+                        this.Invoke((Action)(() =>
+                        {
+                            TurnOffScreen();
+                        }));
+                    });
+                }
+                else
+                {
+                    string message = "锁屏操作超时或失败，可能与其他程序冲突";
+                    LogOperation(message);
+                    UpdateStatus(message);
+                }
             }
             catch (Exception ex)
             {
-                string errorMsg = $"锁屏并关闭屏幕失败：{ex.Message}";
+                string errorMsg = $"锁屏并关闭屏幕时发生错误：{ex.Message}";
                 UpdateStatus(errorMsg);
                 LogOperation(errorMsg);
             }
@@ -530,28 +618,75 @@ namespace ScreenControl
 
         private void MonitorTimer_Tick(object sender, EventArgs e)
         {
-            if (isScreenOff && IsSystemAwake())
+            // 快速检查，如果没有处于屏幕关闭状态，可以跳过详细检查
+            if (!isScreenOff)
             {
-                // 屏幕已被唤醒，计算关闭时长
-                DateTime now = DateTime.Now;
-                TimeSpan duration = now - screenOffTime;
+                return;
+            }
+            
+            try
+            {
+                // 使用超时保护的方式检查系统唤醒状态
+                bool[] isSystemAwake = new bool[] { false }; // 使用数组引用传递
+                bool checkCompleted = ExecuteWithTimeout(() =>
+                {
+                    isSystemAwake[0] = IsSystemAwake();
+                }, 1000); // 1秒超时
                 
-                monitorTimer.Stop();
+                // 只有当检查成功完成且系统确实唤醒时才进行状态切换
+                if (checkCompleted && isSystemAwake[0])
+                {
+                    // 使用超时保护执行状态重置操作
+                    ExecuteWithTimeout(() =>
+                    {
+                        // 屏幕已被唤醒，计算关闭时长
+                        DateTime now = DateTime.Now;
+                        TimeSpan duration = now - screenOffTime;
+                        
+                        // 重置屏幕状态标志
+                        isScreenOff = false;
+                        
+                        // 停止监控计时器
+                        if (monitorTimer.Enabled)
+                        {
+                            monitorTimer.Stop();
+                        }
+                        
+                        // 恢复正常电源状态
+                        SetThreadExecutionState(ES_CONTINUOUS);
+                        
+                        // 确保运行时间计时器继续运行
+                        if (!uptimeTimer.Enabled)
+                        {
+                            uptimeTimer.Start();
+                        }
+                        
+                        string message = $"屏幕已唤醒，关闭时长：{duration.TotalMinutes:F2}分钟（{duration.Hours}小时{duration.Minutes}分钟{duration.Seconds}秒）";
+                        UpdateStatus(message);
+                        LogOperation(message);
+                    }, 1500); // 1.5秒超时
+                }
+            }
+            catch (Exception ex)
+            {
+                // 重置状态标志，避免卡死状态
                 isScreenOff = false;
                 
-                // 恢复正常电源状态
-                SetThreadExecutionState(ES_CONTINUOUS);
+                string errorMsg = $"监控屏幕状态时出错：{ex.Message}";
+                UpdateStatus(errorMsg);
+                LogOperation(errorMsg);
                 
-                // 确保运行时间计时器继续运行（再次确认）
-                if (!uptimeTimer.Enabled)
+                // 在错误情况下，尝试停止监控计时器以防止持续出错
+                try
                 {
-                    uptimeTimer.Start();
-                    LogOperation("屏幕唤醒后确保运行时间计时器继续运行");
+                    if (monitorTimer.Enabled)
+                    {
+                        monitorTimer.Stop();
+                    }
+                    // 重置线程执行状态
+                    SetThreadExecutionState(ES_CONTINUOUS);
                 }
-                
-                string message = $"屏幕已唤醒，关闭时长：{duration.TotalMinutes:F2}分钟（{duration.Hours}小时{duration.Minutes}分钟{duration.Seconds}秒）";
-                LogOperation(message);
-                UpdateStatus(message);
+                catch { /* 忽略重置状态时可能出现的错误 */ }
             }
         }
 
