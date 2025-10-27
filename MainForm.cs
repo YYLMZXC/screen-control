@@ -41,56 +41,9 @@ namespace ScreenControl
             LogOperation($"应用程序启动，启动时间：{startTime:yyyy-MM-dd HH:mm:ss}");
             UpdateStatus("应用程序已启动，就绪");
             
-            // 程序启动时自动检查更新（在后台线程中进行）
-            _ = AutoCheckForUpdatesAsync();
-        }
-        
-        /// <summary>
-        /// 自动检查更新的异步方法
-        /// </summary>
-        private async Task AutoCheckForUpdatesAsync()
-        {
-            try
-            {
-                // 稍微延迟一点，让程序完全启动后再检查
-                await Task.Delay(3000);
-                
-                // 创建更新检查器实例
-                UpdateChecker updateChecker = new UpdateChecker();
-                
-                // 检查更新
-                UpdateChecker.UpdateInfo updateInfo = await updateChecker.CheckForUpdatesAsync(Version);
-                
-                // 只有在发现新版本时才显示提示
-                if (updateInfo.HasUpdate && !string.IsNullOrEmpty(updateInfo.LatestVersion))
-                {
-                    this.Invoke((MethodInvoker)delegate
-                    {
-                        UpdateStatus($"发现新版本: {updateInfo.LatestVersion}");
-                        LogOperation($"自动检查更新：发现新版本 {updateInfo.LatestVersion}");
-                        
-                        // 询问用户是否查看更新
-                        DialogResult result = MessageBox.Show(
-                            $"发现新版本 {updateInfo.LatestVersion}！\n您当前使用的版本是 {Version}。\n\n是否查看详情？", 
-                            "发现新版本", 
-                            MessageBoxButtons.YesNo, 
-                            MessageBoxIcon.Information);
-                        
-                        if (result == DialogResult.Yes)
-                        {
-                            System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo(updateInfo.ReleaseUrl);
-                            psi.UseShellExecute = true;
-                            System.Diagnostics.Process.Start(psi);
-                            UpdateStatus("已打开发布页面");
-                        }
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                // 自动检查更新失败时不显示错误，只记录日志
-                LogOperation("自动检查更新失败（静默）：" + ex.Message);
-            }
+            // 程序启动时自动检查更新（使用AutoUpdateManager类在后台线程中进行）
+            AutoUpdateManager updateManager = new AutoUpdateManager(Version, UpdateStatus, LogOperation, this);
+            updateManager.StartAutoCheck();
         }
         
         // 复选框状态变化事件处理
