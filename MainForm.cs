@@ -14,6 +14,7 @@ namespace ScreenControl
         private DateTime lastMouseMoveTime;
         private bool isScreenOff = false;
         private const string LogFilePath = "bugs/screencontrol.log";
+        private const string SettingsFilePath = "settings.json";
         private const string Version = "1.2.2";
         private const string GiteeUrl = "https://gitee.com/yylmzxc/screen-control";
         private const string GithubUrl = "https://github.com/YYLMZXC/screen-control";
@@ -26,9 +27,73 @@ namespace ScreenControl
             InitializeMonitorTimer();
             InitializeUptimeTimer();
             InitializeStatusLabel();
+            
+            // 加载设置
+            LoadSettings();
+            
+            // 添加复选框状态变化事件
+            if (chkDelayWakeUp != null)
+            {
+                chkDelayWakeUp.CheckedChanged += ChkDelayWakeUp_CheckedChanged;
+            }
+            
             startTime = DateTime.Now;
             LogOperation($"应用程序启动，启动时间：{startTime:yyyy-MM-dd HH:mm:ss}");
             UpdateStatus("应用程序已启动，就绪");
+        }
+        
+        // 复选框状态变化事件处理
+        private void ChkDelayWakeUp_CheckedChanged(object sender, EventArgs e)
+        {
+            SaveSettings();
+        }
+        
+        // 保存设置
+        private void SaveSettings()
+        {
+            try
+            {
+                // 创建设置对象
+                var settings = new
+                {
+                    DelayWakeUpEnabled = chkDelayWakeUp?.Checked ?? true
+                };
+                
+                // 序列化并保存到文件
+                string settingsJson = Newtonsoft.Json.JsonConvert.SerializeObject(settings);
+                File.WriteAllText(SettingsFilePath, settingsJson);
+            }
+            catch (Exception ex)
+            {
+                LogOperation($"保存设置失败：{ex.Message}");
+            }
+        }
+        
+        // 加载设置
+        private void LoadSettings()
+        {
+            try
+            {
+                if (File.Exists(SettingsFilePath) && chkDelayWakeUp != null)
+                {
+                    string settingsJson = File.ReadAllText(SettingsFilePath);
+                    var settings = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(settingsJson);
+                    
+                    if (settings != null && settings.DelayWakeUpEnabled != null)
+                    {
+                        chkDelayWakeUp.Checked = settings.DelayWakeUpEnabled;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogOperation($"加载设置失败：{ex.Message}");
+                // 加载失败时使用默认值
+                if (chkDelayWakeUp != null)
+                {
+                    chkDelayWakeUp.Checked = true;
+                }
+            }
         }
 
         private void InitializeUptimeTimer()
