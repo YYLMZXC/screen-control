@@ -7,15 +7,13 @@ namespace ScreenControl
     {
         // 公共属性，供父窗体访问设置值
         public bool EnableHotkeys { get; private set; }
-        public bool DelayWakeUpEnabled { get; private set; }
 
-        public SettingsForm(bool enableHotkeys, bool delayWakeUpEnabled)
+        public SettingsForm(bool enableHotkeys)
         {
             InitializeComponent();
             
             // 初始化设置值
             EnableHotkeys = enableHotkeys;
-            DelayWakeUpEnabled = delayWakeUpEnabled;
             
             // 加载设置到界面
             LoadSettingsToUI();
@@ -25,7 +23,6 @@ namespace ScreenControl
         {
             // 设置复选框状态
             chkEnableHotkeys.Checked = EnableHotkeys;
-            chkDelayWakeUp.Checked = DelayWakeUpEnabled;
         }
 
         private void btnOK_Click(object sender, EventArgs e)
@@ -50,7 +47,6 @@ namespace ScreenControl
             {
                 // 保存设置
                 EnableHotkeys = chkEnableHotkeys.Checked;
-                DelayWakeUpEnabled = chkDelayWakeUp.Checked;
                 
                 return true;
             }
@@ -67,7 +63,6 @@ namespace ScreenControl
     {
         private System.ComponentModel.IContainer components = null;
         private GroupBox groupBox1;
-        private CheckBox chkDelayWakeUp;
         private CheckBox chkEnableHotkeys;
         private Button btnOK;
         private Button btnCancel;
@@ -84,7 +79,6 @@ namespace ScreenControl
         private void InitializeComponent()
         {
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.chkDelayWakeUp = new System.Windows.Forms.CheckBox();
             this.chkEnableHotkeys = new System.Windows.Forms.CheckBox();
             this.btnOK = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
@@ -93,11 +87,10 @@ namespace ScreenControl
             // 
             // groupBox1
             // 
-            this.groupBox1.Controls.Add(this.chkDelayWakeUp);
             this.groupBox1.Controls.Add(this.chkEnableHotkeys);
             this.groupBox1.Location = new System.Drawing.Point(12, 12);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(280, 120);
+            this.groupBox1.Size = new System.Drawing.Size(280, 80);
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "屏幕控制设置";
@@ -111,16 +104,6 @@ namespace ScreenControl
             this.chkEnableHotkeys.TabIndex = 0;
             this.chkEnableHotkeys.Text = "启用快捷键";
             this.chkEnableHotkeys.UseVisualStyleBackColor = true;
-            // 
-            // chkDelayWakeUp
-            // 
-            this.chkDelayWakeUp.AutoSize = true;
-            this.chkDelayWakeUp.Location = new System.Drawing.Point(30, 70);
-            this.chkDelayWakeUp.Name = "chkDelayWakeUp";
-            this.chkDelayWakeUp.Size = new System.Drawing.Size(119, 19);
-            this.chkDelayWakeUp.TabIndex = 1;
-            this.chkDelayWakeUp.Text = "启用延迟唤醒检测";
-            this.chkDelayWakeUp.UseVisualStyleBackColor = true;
             // 
             // btnOK
             // 

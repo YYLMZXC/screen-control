@@ -15,6 +15,7 @@ namespace ScreenControl
         private DateTime screenOffTime;
         private DateTime startTime;
         private DateTime lastMouseMoveTime;
+        private Point lastCursorPos = Point.Empty;
         private bool isScreenOff = false;
         private const string LogFilePath = "bugs/screencontrol.log";
         private const string SettingsFilePath = "settings.json";
@@ -45,11 +46,7 @@ namespace ScreenControl
             // 加载设置
             LoadSettings();
             
-            // 添加复选框状态变化事件
-            if (chkDelayWakeUp != null)
-            {
-                chkDelayWakeUp.CheckedChanged += ChkDelayWakeUp_CheckedChanged;
-            }
+
             
             startTime = DateTime.Now;
             LogOperation($"应用程序启动，启动时间：{startTime:yyyy-MM-dd HH:mm:ss}");
@@ -237,15 +234,7 @@ namespace ScreenControl
             }
         }
         
-        // 复选框状态变化事件处理
-        private void ChkDelayWakeUp_CheckedChanged(object sender, EventArgs e)
-        {
-            SaveSettings();
-            // 更新状态标签以显示复选框的当前状态
-            string statusText = chkDelayWakeUp.Checked ? "延迟唤醒检测已启用" : "延迟唤醒检测已禁用";
-            UpdateStatus(statusText);
-            LogOperation(statusText);
-        }
+
         
         // 保存设置
         private void SaveSettings()
@@ -255,7 +244,6 @@ namespace ScreenControl
                 // 创建设置对象，包含所有可配置参数
                 var settings = new
                 {
-                    DelayWakeUpEnabled = chkDelayWakeUp?.Checked ?? true,
                     EnableHotkeys = enableHotkeys
                 };
                 
@@ -263,7 +251,7 @@ namespace ScreenControl
                 string settingsJson = Newtonsoft.Json.JsonConvert.SerializeObject(settings);
                 File.WriteAllText(SettingsFilePath, settingsJson);
                 
-                LogOperation($"设置已保存：快捷键={enableHotkeys}, 延迟唤醒={chkDelayWakeUp?.Checked ?? true}");
+                LogOperation($"设置已保存：快捷键={enableHotkeys}");
             }
             catch (Exception ex)
             {
@@ -276,19 +264,13 @@ namespace ScreenControl
         {
             try
             {
-                if (File.Exists(SettingsFilePath) && chkDelayWakeUp != null)
+                if (File.Exists(SettingsFilePath))
                 {
                     string settingsJson = File.ReadAllText(SettingsFilePath);
                     var settings = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(settingsJson);
                     
                     if (settings != null)
                     {
-                        // 加载延迟唤醒检测状态
-                        if (settings.DelayWakeUpEnabled != null)
-                        {
-                            chkDelayWakeUp.Checked = settings.DelayWakeUpEnabled;
-                        }
-                        
                         // 加载快捷键启用状态
                         if (settings.EnableHotkeys != null)
                         {
@@ -296,17 +278,13 @@ namespace ScreenControl
                         }
                     }
                     
-                    LogOperation($"设置已加载：快捷键={enableHotkeys}, 延迟唤醒={chkDelayWakeUp?.Checked ?? true}");
+                    LogOperation($"设置已加载：快捷键={enableHotkeys}");
                 }
             }
             catch (Exception ex)
             {
                 LogOperation($"加载设置失败：{ex.Message}");
-                // 加载失败时使用默认值
-                if (chkDelayWakeUp != null)
-                {
-                    chkDelayWakeUp.Checked = true;
-                }
+
             }
         }
 
@@ -399,16 +377,40 @@ namespace ScreenControl
         private const int MONITOR_ON = -1;
         private const int MONITOR_STANDBY = 1;
         
+        [DllImport("user32.dll")]
+        private static extern bool GetCursorPos(out Point lpPoint);
+        
+        [DllImport("user32.dll")]
+        private static extern short GetAsyncKeyState(int vKey);
+        
         // 检查系统是否被唤醒（屏幕是否开启）
         private bool IsSystemAwake()
-        {
-            LASTINPUTINFO lastInputInfo = new LASTINPUTINFO();
-            lastInputInfo.cbSize = (uint)Marshal.SizeOf(lastInputInfo);
-            GetLastInputInfo(ref lastInputInfo);
-            
-            // 只要检测到任何输入（鼠标/键盘），立即唤醒屏幕
-            LogOperation("检测到活动，立即唤醒屏幕");
-            return true;
+        {            
+            // 检查是否有鼠标移动
+            if (!GetCursorPos(out Point cursorPos))
+            {
+                cursorPos = Point.Empty;
+            }
+
+            // 检查是否有键盘按键
+            bool anyKeyPressed = false;
+            for (int i = 0; i < 256; i++)
+            {
+                if (GetAsyncKeyState(i) != 0)
+                {
+                    anyKeyPressed = true;
+                    break;
+                }
+            }
+
+            // 如果检测到鼠标移动或键盘按键，立即唤醒屏幕
+            if (anyKeyPressed || cursorPos != lastCursorPos)
+            {
+                lastCursorPos = cursorPos;
+                return true;
+            }
+
+            return false;
         }
 
         private void TurnOffScreen()
@@ -858,22 +860,16 @@ namespace ScreenControl
         private void btnSettings_Click(object sender, EventArgs e)
         {
             using (SettingsForm settingsForm = new SettingsForm(
-                enableHotkeys, 
-                chkDelayWakeUp?.Checked ?? true))
+                enableHotkeys))
             {
                 if (settingsForm.ShowDialog() == DialogResult.OK)
                 {
                     // 保存新的设置值
                     enableHotkeys = settingsForm.EnableHotkeys;
                     
-                    if (chkDelayWakeUp != null)
-                    {
-                        chkDelayWakeUp.Checked = settingsForm.DelayWakeUpEnabled;
-                    }
-                    
                     SaveSettings();
                     UpdateStatus("设置已更新");
-                    LogOperation($"用户通过界面更新设置：快捷键={enableHotkeys}, 延迟唤醒={chkDelayWakeUp?.Checked ?? true}");
+                    LogOperation($"用户通过界面更新设置：快捷键={enableHotkeys}");
                 }
             }
         }
