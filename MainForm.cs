@@ -438,19 +438,47 @@ namespace ScreenControl
         }
 
         private void ShowHelp()
-        {
-            // 创建帮助菜单
+        {            // 创建帮助菜单
             ContextMenuStrip helpMenu = new ContextMenuStrip();
             
-            // 添加菜单项（使用&标记设置快捷键为A）
+            // 添加关于菜单项（使用&标记设置快捷键为A）
             ToolStripMenuItem aboutMenuItem = new ToolStripMenuItem("关于(&A)");
             aboutMenuItem.Click += AboutMenuItem_Click;
             
+            // 添加检查更新菜单项（使用&标记设置快捷键为U）
+            ToolStripMenuItem checkUpdateMenuItem = new ToolStripMenuItem("检查更新(&U)");
+            checkUpdateMenuItem.Click += CheckUpdateMenuItem_Click;
+            
             // 将菜单项添加到菜单
             helpMenu.Items.Add(aboutMenuItem);
+            helpMenu.Items.Add(checkUpdateMenuItem);
             
             // 显示菜单在按钮旁边
             helpMenu.Show(btnHelp, new System.Drawing.Point(0, btnHelp.Height));
+        }
+        
+        // 检查更新菜单项点击事件处理
+        private void CheckUpdateMenuItem_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                UpdateStatus("正在检查更新...");
+                
+                // 打开Gitee发布页面
+                string releaseUrl = "https://gitee.com/yylmzxc/screen-control/releases";
+                System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo(releaseUrl);
+                psi.UseShellExecute = true;
+                System.Diagnostics.Process.Start(psi);
+                
+                UpdateStatus("已打开发布页面，请查看最新版本");
+                LogOperation("检查更新：已打开发布页面");
+            }
+            catch (Exception ex)
+            {
+                UpdateStatus("检查更新失败：" + ex.Message);
+                LogOperation("检查更新失败：" + ex.Message);
+                MessageBox.Show("检查更新失败：" + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void AboutMenuItem_Click(object sender, EventArgs e)
