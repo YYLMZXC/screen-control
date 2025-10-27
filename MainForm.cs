@@ -2,6 +2,9 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using System.Threading.Tasks;
+using System.Drawing;
+using System.Reflection;
 
 namespace ScreenControl
 {
@@ -20,6 +23,8 @@ namespace ScreenControl
         private const string GithubUrl = "https://github.com/YYLMZXC/screen-control";
         private Label statusLabel; // 用于显示状态信息的标签
         private Label uptimeLabel; // 用于显示运行时间的标签
+        private NotifyIcon notifyIcon; // 托盘图标
+        private ContextMenuStrip trayMenu; // 托盘右键菜单
 
         public MainForm()
         {
@@ -27,6 +32,7 @@ namespace ScreenControl
             InitializeMonitorTimer();
             InitializeUptimeTimer();
             InitializeStatusLabel();
+            InitializeTrayIcon(); // 初始化托盘图标
             
             // 加载设置
             LoadSettings();
@@ -44,6 +50,179 @@ namespace ScreenControl
             // 程序启动时自动检查更新（使用AutoUpdateManager类在后台线程中进行）
             AutoUpdateManager updateManager = new AutoUpdateManager(Version, UpdateStatus, LogOperation, this);
             updateManager.StartAutoCheck();
+        }
+        
+        // 初始化托盘图标和菜单
+        private void InitializeTrayIcon()
+        {
+            // 创建托盘图标
+            notifyIcon = new NotifyIcon();
+            notifyIcon.Text = "屏幕控制 v" + Version;
+            
+            // 尝试多种方式加载图标
+            try
+            {
+                // 首先尝试使用文件系统中的图标文件
+                string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "screencontrol.ico");
+                if (File.Exists(iconPath))
+                {
+                    notifyIcon.Icon = new System.Drawing.Icon(iconPath);
+                    LogOperation("从文件系统加载托盘图标成功");
+                }
+                else
+                {
+                    // 尝试使用res文件夹中的图标
+                    iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "res", "screencontrol.ico");
+                    if (File.Exists(iconPath))
+                    {
+                        notifyIcon.Icon = new System.Drawing.Icon(iconPath);
+                        LogOperation("从res文件夹加载托盘图标成功");
+                    }
+                    else
+                    {
+                        // 最后尝试从嵌入式资源加载
+                        try
+                        {
+                            using (Stream stream = typeof(MainForm).Assembly.GetManifestResourceStream("ScreenControl.res.screencontrol.ico"))
+                            {
+                                if (stream != null)
+                                {
+                                    notifyIcon.Icon = new System.Drawing.Icon(stream);
+                                    LogOperation("从嵌入式资源加载托盘图标成功");
+                                }
+                                else
+                                {
+                                    LogOperation("无法找到嵌入式图标资源");
+                                    // 使用默认图标
+                                    notifyIcon.Icon = SystemIcons.Application;
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            LogOperation($"从嵌入式资源加载托盘图标失败：{ex.Message}");
+                            // 使用默认图标
+                            notifyIcon.Icon = SystemIcons.Application;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogOperation($"加载托盘图标失败：{ex.Message}");
+                // 确保至少有一个默认图标
+                notifyIcon.Icon = SystemIcons.Application;
+            }
+            
+            // 创建托盘右键菜单
+            trayMenu = new ContextMenuStrip();
+            
+            // 添加显示主窗口菜单项
+            ToolStripMenuItem showMainFormItem = new ToolStripMenuItem("显示主窗口");
+            showMainFormItem.Click += ShowMainFormItem_Click;
+            trayMenu.Items.Add(showMainFormItem);
+            
+            // 添加关闭屏幕菜单项
+            ToolStripMenuItem turnOffScreenItem = new ToolStripMenuItem("关闭屏幕");
+            turnOffScreenItem.Click += (s, e) => TurnOffScreen();
+            trayMenu.Items.Add(turnOffScreenItem);
+            
+            // 添加锁屏并关闭屏幕菜单项
+            ToolStripMenuItem lockAndTurnOffScreenItem = new ToolStripMenuItem("锁屏并关闭屏幕");
+            lockAndTurnOffScreenItem.Click += (s, e) => LockAndTurnOffScreen();
+            trayMenu.Items.Add(lockAndTurnOffScreenItem);
+            
+            // 添加分隔线
+            trayMenu.Items.Add(new ToolStripSeparator());
+            
+            // 添加退出程序菜单项
+            ToolStripMenuItem exitItem = new ToolStripMenuItem("退出程序");
+            exitItem.Click += ExitItem_Click;
+            trayMenu.Items.Add(exitItem);
+            
+            // 设置托盘图标菜单
+            notifyIcon.ContextMenuStrip = trayMenu;
+            
+            // 添加双击事件，用于恢复主窗口
+            notifyIcon.DoubleClick += NotifyIcon_DoubleClick;
+            
+            // 设置当主窗口关闭时不自动清理托盘图标
+            notifyIcon.Visible = false; // 初始时隐藏，当最小化时显示
+        }
+        
+        // 显示主窗口菜单项点击事件
+        private void ShowMainFormItem_Click(object sender, EventArgs e)
+        {
+            ShowMainForm();
+        }
+        
+        // 退出程序菜单项点击事件
+        private void ExitItem_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+        
+        // 托盘图标双击事件
+        private void NotifyIcon_DoubleClick(object sender, EventArgs e)
+        {            
+            ShowMainForm();
+        }
+        
+        // 显示主窗口
+        private void ShowMainForm()
+        {            
+            try
+            {                
+                // 优化窗口显示顺序，确保窗口完全可见
+                // 先设置窗口状态
+                if (this.WindowState == FormWindowState.Minimized)
+                {                    
+                    this.WindowState = FormWindowState.Normal;
+                }
+                
+                // 显示窗口
+                this.Visible = true;
+                this.ShowInTaskbar = true;
+                
+                // 连续调用多个方法确保窗口前置并获得焦点
+                // 先激活窗口
+                this.Activate();
+                
+                // 设置为前台窗口（API调用）
+                SetForegroundWindow(this.Handle);
+                
+                // 确保窗口在最前面
+                this.TopMost = true;
+                this.BringToFront();
+                
+                // 移除TopMost属性，避免窗口一直置顶
+                this.TopMost = false;
+                
+                // 确保窗口获得焦点
+                this.Focus();
+                
+                LogOperation("窗口已从托盘恢复显示并前置");
+            }
+            catch (Exception ex)
+            {                
+                LogOperation($"恢复窗口显示时出错: {ex.Message}");
+            }
+        }
+        
+        // 切换窗口显示状态（用于任务栏点击）
+        private void ToggleWindowVisibility()
+        {            
+            if (this.Visible && this.WindowState != FormWindowState.Minimized)
+            {                
+                // 如果窗口可见且未最小化，隐藏它但保持任务栏图标
+                this.Visible = false;
+                LogOperation("窗口已隐藏（通过任务栏点击）");
+            }
+            else
+            {                
+                // 如果窗口不可见或最小化，显示它
+                ShowMainForm();
+            }
         }
         
         // 复选框状态变化事件处理
@@ -161,6 +340,11 @@ namespace ScreenControl
         // 锁屏
         [DllImport("user32.dll")]
         private static extern void LockWorkStation();
+
+        // 设置窗口前台
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
 
         // 获取系统电源状态
         [DllImport("user32.dll")]
@@ -393,11 +577,84 @@ namespace ScreenControl
             }
         }
 
+        // 处理窗口大小改变事件，实现最小化到托盘
+        protected override void OnResize(EventArgs e)
+        {            
+            base.OnResize(e);            
+            
+            // 当窗口最小化时，隐藏窗口并显示托盘图标
+            if (this.WindowState == FormWindowState.Minimized)
+            {                
+                // 隐藏窗口但保持任务栏图标可见（用于点击切换）
+                this.Visible = false;
+                
+                // 确保托盘图标可见
+                notifyIcon.Visible = true;
+                LogOperation("程序已最小化到托盘");
+                
+                try
+                {                    
+                    // 显示提示气泡
+                    notifyIcon.ShowBalloonTip(3000, "屏幕控制", "程序已最小化到托盘，双击托盘图标恢复窗口", ToolTipIcon.Info);
+                }
+                catch (Exception ex)
+                {                    
+                    LogOperation($"显示托盘提示气泡失败：{ex.Message}");
+                }
+            }
+        }
+        
+        // 窗口消息处理，用于捕获任务栏按钮点击
+        protected override void WndProc(ref Message m)
+        {            
+            const int WM_SYSCOMMAND = 0x0112;
+            const int SC_RESTORE = 0xF120;
+            const int WM_ACTIVATEAPP = 0x001C;
+            const int WM_ACTIVATE = 0x0006;
+            
+            // 处理系统命令消息（包括任务栏点击）
+            if (m.Msg == WM_SYSCOMMAND)
+            {                
+                // 处理恢复窗口命令
+                if (m.WParam.ToInt32() == SC_RESTORE)
+                {                    
+                    ToggleWindowVisibility();
+                    return; // 阻止默认处理
+                }
+            }
+            
+            // 处理应用程序激活消息
+            else if (m.Msg == WM_ACTIVATEAPP || m.Msg == WM_ACTIVATE)
+            {                
+                // 当通过任务栏点击激活时
+                if (!this.Visible && (m.Msg == WM_ACTIVATEAPP && m.WParam.ToInt32() == 1))
+                {                    
+                    ToggleWindowVisibility();
+                }
+            }
+            
+            base.WndProc(ref m);
+        }
+        
         protected override void OnFormClosing(FormClosingEventArgs e)
-        {
-            base.OnFormClosing(e);
+        {            
+            base.OnFormClosing(e);            
             monitorTimer.Stop();
+            
+            // 清理托盘图标
+            if (notifyIcon != null)
+            {                
+                notifyIcon.Visible = false;
+                notifyIcon.Dispose();
+            }
             uptimeTimer.Stop();
+            
+            // 清理托盘图标
+            if (notifyIcon != null)
+            {
+                notifyIcon.Visible = false;
+                notifyIcon.Dispose();
+            }
             
             // 恢复正常电源状态
             if (isScreenOff)
