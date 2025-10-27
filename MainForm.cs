@@ -15,7 +15,7 @@ namespace ScreenControl
         private bool isScreenOff = false;
         private const string LogFilePath = "bugs/screencontrol.log";
         private const string SettingsFilePath = "settings.json";
-        private const string Version = "1.3.1";
+        private const string Version = "1.2.1";
         private const string GiteeUrl = "https://gitee.com/yylmzxc/screen-control";
         private const string GithubUrl = "https://github.com/YYLMZXC/screen-control";
         private Label statusLabel; // 用于显示状态信息的标签
@@ -458,20 +458,51 @@ namespace ScreenControl
         }
         
         // 检查更新菜单项点击事件处理
-        private void CheckUpdateMenuItem_Click(object sender, EventArgs e)
+        private async void CheckUpdateMenuItem_Click(object sender, EventArgs e)
         {
             try
             {
                 UpdateStatus("正在检查更新...");
+                LogOperation("开始检查更新");
                 
-                // 打开Gitee发布页面
-                string releaseUrl = "https://gitee.com/yylmzxc/screen-control/releases";
-                System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo(releaseUrl);
-                psi.UseShellExecute = true;
-                System.Diagnostics.Process.Start(psi);
+                // 创建更新检查器实例
+                UpdateChecker updateChecker = new UpdateChecker();
                 
-                UpdateStatus("已打开发布页面，请查看最新版本");
-                LogOperation("检查更新：已打开发布页面");
+                // 在后台线程中检查更新，避免阻塞UI
+                UpdateChecker.UpdateInfo updateInfo = await Task.Run(() => updateChecker.CheckForUpdatesAsync(Version));
+                
+                if (string.IsNullOrEmpty(updateInfo.LatestVersion))
+                {
+                    UpdateStatus("无法获取最新版本信息");
+                    LogOperation("检查更新：无法获取最新版本信息");
+                    MessageBox.Show("无法获取最新版本信息，请稍后再试。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else if (updateInfo.HasUpdate)
+                {
+                    UpdateStatus($"发现新版本: {updateInfo.LatestVersion}");
+                    LogOperation($"检查更新：发现新版本 {updateInfo.LatestVersion}");
+                    
+                    // 询问用户是否打开发布页面
+                    DialogResult result = MessageBox.Show(
+                        $"发现新版本 {updateInfo.LatestVersion}！\n您当前使用的版本是 {Version}。\n\n是否打开发布页面查看详情？", 
+                        "发现新版本", 
+                        MessageBoxButtons.YesNo, 
+                        MessageBoxIcon.Information);
+                    
+                    if (result == DialogResult.Yes)
+                    {
+                        System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo(updateInfo.ReleaseUrl);
+                        psi.UseShellExecute = true;
+                        System.Diagnostics.Process.Start(psi);
+                        UpdateStatus("已打开发布页面");
+                    }
+                }
+                else
+                {
+                    UpdateStatus("您使用的是最新版本");
+                    LogOperation("检查更新：当前已是最新版本");
+                    MessageBox.Show($"您当前使用的版本 {Version} 已是最新版本！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
             }
             catch (Exception ex)
             {
