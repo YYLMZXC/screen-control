@@ -357,7 +357,11 @@ namespace ScreenControl
             giteeLabel.Text = $"Gitee 地址: {GiteeUrl}";
             giteeLabel.ForeColor = System.Drawing.Color.Blue;
             giteeLabel.Cursor = System.Windows.Forms.Cursors.Hand;
-            giteeLabel.Click += (s, ev) => System.Diagnostics.Process.Start(GiteeUrl);
+            giteeLabel.Click += (s, ev) => {
+                System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo(GiteeUrl);
+                psi.UseShellExecute = true;
+                System.Diagnostics.Process.Start(psi);
+            };
             
             Label githubLabel = new Label();
             githubLabel.Location = new System.Drawing.Point(20, 100);
@@ -365,7 +369,11 @@ namespace ScreenControl
             githubLabel.Text = $"GitHub 地址: {GithubUrl}";
             githubLabel.ForeColor = System.Drawing.Color.Blue;
             githubLabel.Cursor = System.Windows.Forms.Cursors.Hand;
-            githubLabel.Click += (s, ev) => System.Diagnostics.Process.Start(GithubUrl);
+            githubLabel.Click += (s, ev) => {
+                System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo(GithubUrl);
+                psi.UseShellExecute = true;
+                System.Diagnostics.Process.Start(psi);
+            };
             
             Label descriptionLabel = new Label();
             descriptionLabel.Location = new System.Drawing.Point(20, 140);
