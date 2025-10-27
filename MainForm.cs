@@ -19,7 +19,7 @@ namespace ScreenControl
         private bool isScreenOff = false;
         private const string LogFilePath = "bugs/screencontrol.log";
         private const string SettingsFilePath = "settings.json";
-        private const string Version = "1.5.0";
+        private const string Version = "1.5.1";
         private const string GiteeUrl = "https://gitee.com/yylmzxc/screen-control";
         private const string GithubUrl = "https://github.com/YYLMZXC/screen-control";
 
@@ -33,6 +33,7 @@ namespace ScreenControl
         private Label uptimeLabel; // 用于显示运行时间的标签
         private NotifyIcon notifyIcon; // 托盘图标
         private bool enableHotkeys = true; // 快捷键启用状态标志
+        private int closeScreenDelay = 5; // 延迟关闭屏幕的秒数，默认5秒
         private ContextMenuStrip trayMenu; // 托盘右键菜单
 
         public MainForm()
@@ -244,14 +245,15 @@ namespace ScreenControl
                 // 创建设置对象，包含所有可配置参数
                 var settings = new
                 {
-                    EnableHotkeys = enableHotkeys
+                    EnableHotkeys = enableHotkeys,
+                    CloseScreenDelay = closeScreenDelay
                 };
                 
                 // 序列化并保存到文件
                 string settingsJson = Newtonsoft.Json.JsonConvert.SerializeObject(settings);
                 File.WriteAllText(SettingsFilePath, settingsJson);
                 
-                LogOperation($"设置已保存：快捷键={enableHotkeys}");
+                LogOperation($"设置已保存：快捷键={enableHotkeys}，延迟关闭屏幕={closeScreenDelay}秒");
             }
             catch (Exception ex)
             {
@@ -276,9 +278,15 @@ namespace ScreenControl
                         {
                             enableHotkeys = settings.EnableHotkeys;
                         }
+                        
+                        // 加载延迟关闭屏幕的时间
+                        if (settings.CloseScreenDelay != null)
+                        {
+                            closeScreenDelay = settings.CloseScreenDelay;
+                        }
                     }
                     
-                    LogOperation($"设置已加载：快捷键={enableHotkeys}");
+                    LogOperation($"设置已加载：快捷键={enableHotkeys}，延迟关闭屏幕={closeScreenDelay}秒");
                 }
             }
             catch (Exception ex)
@@ -388,6 +396,44 @@ namespace ScreenControl
         }
 
         private void TurnOffScreen()
+        {
+            try
+            {
+                if (closeScreenDelay > 0)
+                {
+                    // 延迟关闭屏幕
+                    UpdateStatus($"将在{closeScreenDelay}秒后关闭屏幕...");
+                    LogOperation($"开始延迟{closeScreenDelay}秒关闭屏幕");
+                    
+                    // 使用定时器实现延迟
+                    System.Windows.Forms.Timer delayTimer = new System.Windows.Forms.Timer();
+                    delayTimer.Interval = closeScreenDelay * 1000; // 转换为毫秒
+                    delayTimer.Tick += (s, e) =>
+                    {
+                        delayTimer.Stop();
+                        delayTimer.Dispose();
+                        
+                        // 执行实际的屏幕关闭操作
+                        PerformScreenTurnOff();
+                    };
+                    delayTimer.Start();
+                }
+                else
+                {
+                    // 立即关闭屏幕
+                    PerformScreenTurnOff();
+                }
+            }
+            catch (Exception ex)
+            {
+                string errorMsg = $"关闭屏幕失败：{ex.Message}";
+                UpdateStatus(errorMsg);
+                LogOperation(errorMsg);
+            }
+        }
+        
+        // 执行实际的屏幕关闭操作
+        private void PerformScreenTurnOff()
         {
             try
             {
@@ -818,16 +864,17 @@ namespace ScreenControl
         private void btnSettings_Click(object sender, EventArgs e)
         {
             using (SettingsForm settingsForm = new SettingsForm(
-                enableHotkeys))
+                enableHotkeys, closeScreenDelay))
             {
                 if (settingsForm.ShowDialog() == DialogResult.OK)
                 {
                     // 保存新的设置值
                     enableHotkeys = settingsForm.EnableHotkeys;
+                    closeScreenDelay = settingsForm.CloseScreenDelay;
                     
                     SaveSettings();
                     UpdateStatus("设置已更新");
-                    LogOperation($"用户通过界面更新设置：快捷键={enableHotkeys}");
+                    LogOperation($"用户通过界面更新设置：快捷键={enableHotkeys}，延迟关闭屏幕={closeScreenDelay}秒");
                 }
             }
         }

@@ -7,13 +7,15 @@ namespace ScreenControl
     {
         // 公共属性，供父窗体访问设置值
         public bool EnableHotkeys { get; private set; }
+        public int CloseScreenDelay { get; private set; } // 延迟关闭屏幕的时间（秒）
 
-        public SettingsForm(bool enableHotkeys)
+        public SettingsForm(bool enableHotkeys, int closeScreenDelay)
         {
             InitializeComponent();
             
             // 初始化设置值
             EnableHotkeys = enableHotkeys;
+            CloseScreenDelay = closeScreenDelay;
             
             // 加载设置到界面
             LoadSettingsToUI();
@@ -23,6 +25,9 @@ namespace ScreenControl
         {
             // 设置复选框状态
             chkEnableHotkeys.Checked = EnableHotkeys;
+            
+            // 设置延迟时间
+            numCloseScreenDelay.Value = CloseScreenDelay;
         }
 
         private void btnOK_Click(object sender, EventArgs e)
@@ -47,6 +52,7 @@ namespace ScreenControl
             {
                 // 保存设置
                 EnableHotkeys = chkEnableHotkeys.Checked;
+                CloseScreenDelay = (int)numCloseScreenDelay.Value;
                 
                 return true;
             }
@@ -64,6 +70,8 @@ namespace ScreenControl
         private System.ComponentModel.IContainer components = null;
         private GroupBox groupBox1;
         private CheckBox chkEnableHotkeys;
+        private NumericUpDown numCloseScreenDelay;
+        private Label labelCloseScreenDelay;
         private Button btnOK;
         private Button btnCancel;
 
@@ -79,21 +87,48 @@ namespace ScreenControl
         private void InitializeComponent()
         {
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.labelCloseScreenDelay = new System.Windows.Forms.Label();
+            this.numCloseScreenDelay = new System.Windows.Forms.NumericUpDown();
             this.chkEnableHotkeys = new System.Windows.Forms.CheckBox();
             this.btnOK = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.numCloseScreenDelay)).BeginInit();
             this.SuspendLayout();
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.labelCloseScreenDelay);
+            this.groupBox1.Controls.Add(this.numCloseScreenDelay);
             this.groupBox1.Controls.Add(this.chkEnableHotkeys);
             this.groupBox1.Location = new System.Drawing.Point(12, 12);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(280, 80);
+            this.groupBox1.Size = new System.Drawing.Size(280, 110);
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "屏幕控制设置";
+            // 
+            // labelCloseScreenDelay
+            // 
+            this.labelCloseScreenDelay.AutoSize = true;
+            this.labelCloseScreenDelay.Location = new System.Drawing.Point(27, 60);
+            this.labelCloseScreenDelay.Name = "labelCloseScreenDelay";
+            this.labelCloseScreenDelay.Size = new System.Drawing.Size(123, 15);
+            this.labelCloseScreenDelay.TabIndex = 2;
+            this.labelCloseScreenDelay.Text = "延迟关闭屏幕（秒）：";
+            // 
+            // numCloseScreenDelay
+            // 
+            this.numCloseScreenDelay.Location = new System.Drawing.Point(156, 58);
+            this.numCloseScreenDelay.Maximum = new decimal(new int[] {
+            60, 0, 0, 0});
+            this.numCloseScreenDelay.Minimum = new decimal(new int[] {
+            0, 0, 0, 0});
+            this.numCloseScreenDelay.Name = "numCloseScreenDelay";
+            this.numCloseScreenDelay.Size = new System.Drawing.Size(60, 21);
+            this.numCloseScreenDelay.TabIndex = 1;
+            this.numCloseScreenDelay.Value = new decimal(new int[] {
+            5, 0, 0, 0});
             // 
             // chkEnableHotkeys
             // 
@@ -107,7 +142,7 @@ namespace ScreenControl
             // 
             // btnOK
             // 
-            this.btnOK.Location = new System.Drawing.Point(120, 140);
+            this.btnOK.Location = new System.Drawing.Point(120, 170);
             this.btnOK.Name = "btnOK";
             this.btnOK.Size = new System.Drawing.Size(75, 30);
             this.btnOK.TabIndex = 1;
@@ -117,7 +152,7 @@ namespace ScreenControl
             // 
             // btnCancel
             // 
-            this.btnCancel.Location = new System.Drawing.Point(210, 140);
+            this.btnCancel.Location = new System.Drawing.Point(210, 170);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(75, 30);
             this.btnCancel.TabIndex = 2;
@@ -129,7 +164,7 @@ namespace ScreenControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(310, 190);
+            this.ClientSize = new System.Drawing.Size(310, 220);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnOK);
             this.Controls.Add(this.groupBox1);
@@ -141,6 +176,7 @@ namespace ScreenControl
             this.Text = "屏幕控制设置";
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.numCloseScreenDelay)).EndInit();
             this.ResumeLayout(false);
         }
     }
