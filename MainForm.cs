@@ -18,6 +18,7 @@ namespace ScreenControl
         private const string GiteeUrl = "https://gitee.com/yylmzxc/screen-control";
         private const string GithubUrl = "https://github.com/YYLMZXC/screen-control";
         private Label statusLabel; // 用于显示状态信息的标签
+        private Label uptimeLabel; // 用于显示运行时间的标签
 
         public MainForm()
         {
@@ -47,16 +48,29 @@ namespace ScreenControl
 
         private void InitializeStatusLabel()
         {
+            // 状态标签 - 用于显示程序状态信息
             statusLabel = new Label();
             statusLabel.Text = "就绪";  
             statusLabel.Width = this.ClientSize.Width - 20;
             statusLabel.Left = 10;
-            statusLabel.Top = this.ClientSize.Height - 30;
+            statusLabel.Top = this.ClientSize.Height - 55;
             statusLabel.AutoSize = false;
             statusLabel.Height = 20;
             statusLabel.BorderStyle = BorderStyle.FixedSingle;
             statusLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.Controls.Add(statusLabel);
+            
+            // 运行时间标签 - 专门用于显示运行时间
+            uptimeLabel = new Label();
+            uptimeLabel.Text = "运行时间: 00:00:00";
+            uptimeLabel.Width = this.ClientSize.Width - 20;
+            uptimeLabel.Left = 10;
+            uptimeLabel.Top = this.ClientSize.Height - 30;
+            uptimeLabel.AutoSize = false;
+            uptimeLabel.Height = 20;
+            uptimeLabel.BorderStyle = BorderStyle.FixedSingle;
+            uptimeLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.Controls.Add(uptimeLabel);
         }
 
         private void UpdateStatus(string message)
@@ -288,10 +302,13 @@ namespace ScreenControl
         {
             // 计算运行时间
             TimeSpan uptime = DateTime.Now - startTime;
-            string uptimeMessage = $"稳定运行时间：{uptime.Days}天{uptime.Hours:00}:{uptime.Minutes:00}:{uptime.Seconds:00}";
+            string uptimeMessage = $"运行时间：{uptime.Days}天{uptime.Hours:00}:{uptime.Minutes:00}:{uptime.Seconds:00}";
             
-            // 每秒更新界面显示
-            UpdateStatus(uptimeMessage);
+            // 专门更新运行时间标签
+            if (uptimeLabel != null)
+            {
+                uptimeLabel.Text = uptimeMessage;
+            }
             
             // 每分钟记录一次日志（避免日志文件过大）
             logCounter++;
