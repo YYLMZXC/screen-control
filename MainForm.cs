@@ -383,6 +383,10 @@ namespace ScreenControl
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
 
+        // 获取桌面窗口句柄
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetDesktopWindow();
+
         // 获取系统电源状态
         [DllImport("user32.dll")]
         private static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
@@ -406,8 +410,7 @@ namespace ScreenControl
         private const uint WM_SYSCOMMAND = 0x0112;
         private const uint SC_MONITORPOWER = 0xF170;
         private const int MONITOR_OFF = 2;
-        private const int MONITOR_ON = -1;
-        private const int MONITOR_STANDBY = 1;
+        private const int HWND_BROADCAST = 0xFFFF;  // 广播消息到所有窗口
               
         // 检查系统是否被唤醒（屏幕是否开启）
         private bool IsSystemAwake()
@@ -454,6 +457,14 @@ namespace ScreenControl
             }
         }
         
+        // SystemParametersInfo API 声明
+        [DllImport("user32.dll")]
+        private static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
+
+        // SystemParametersInfo 常量
+        private const uint SPI_SETSCREENSAVEACTIVE = 0x0011;
+        private const uint SPIF_SENDCHANGE = 0x0002;
+
         // 执行实际的屏幕关闭操作
         private void PerformScreenTurnOff()
         {
@@ -464,19 +475,59 @@ namespace ScreenControl
                 lastMouseMoveTime = DateTime.MinValue;
                 isScreenOff = true;
                 
-                // 发送消息关闭屏幕
-                SendMessage(this.Handle, WM_SYSCOMMAND, (IntPtr)SC_MONITORPOWER, (IntPtr)MONITOR_OFF);
+                // 重要：首先清除之前的任何电源设置，重置为默认状态
+                SetThreadExecutionState(ES_CONTINUOUS);
+                LogOperation("已重置电源状态");
                 
-                // 设置线程执行状态，防止系统睡眠但允许显示关闭
-                SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
+                // 然后设置新的电源状态：
+                // ES_CONTINUOUS: 使设置持续有效
+                // 移除ES_DISPLAY_REQUIRED以允许屏幕关闭
+                uint state = SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
+                LogOperation($"设置系统保持活跃状态，返回值: {state}");
+                
+                // 获取系统目录路径
+                string windowsDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                string system32Dir = Path.Combine(windowsDir, "System32");
+                string scrnsavePath = Path.Combine(system32Dir, "scrnsave.scr");
+                
+                bool screenSaverStarted = false;
+                
+                // 检查scrnsave.scr是否存在
+                if (File.Exists(scrnsavePath))
+                {
+                    try
+                    {
+                        // 启动屏幕保护程序，/s 参数表示立即启动
+                        System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo();
+                        psi.FileName = scrnsavePath;
+                        psi.Arguments = "/s";
+                        psi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+                        System.Diagnostics.Process.Start(psi);
+                        LogOperation($"已成功启动屏幕保护程序: {scrnsavePath}");
+                        screenSaverStarted = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        LogOperation($"启动屏幕保护程序失败: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    LogOperation($"未找到屏幕保护程序: {scrnsavePath}");
+                }
+                
+                // 如果屏幕保护程序启动失败，回退到使用SendMessage方法
+                if (!screenSaverStarted)
+                {
+                    LogOperation("回退到使用SendMessage方法关闭屏幕");
+                    IntPtr result = SendMessage((IntPtr)HWND_BROADCAST, WM_SYSCOMMAND, (IntPtr)SC_MONITORPOWER, (IntPtr)MONITOR_OFF);
+                    LogOperation($"已发送关闭屏幕消息到所有窗口，返回值: {result}");
+                }
                 
                 // 启动监控计时器
                 monitorTimer.Start();
                 
-                // 运行时间计时器不需要在此处停止和重启，因为运行时间计算完全基于startTime
-                // 计时器的作用只是更新UI显示和记录日志，不会影响实际的运行时间计算
-                
-                string message = $"屏幕已关闭，时间：{screenOffTime:yyyy-MM-dd HH:mm:ss}";
+                string message = $"屏幕已关闭{(screenSaverStarted ? "（使用屏幕保护程序）" : "（使用系统API）")}，时间：{screenOffTime:yyyy-MM-dd HH:mm:ss}，后台程序保持运行";
                 LogOperation(message);
                 UpdateStatus(message);
             }
@@ -496,11 +547,25 @@ namespace ScreenControl
                 LockWorkStation();
                 LogOperation("系统已锁屏");
 
-                // 等待一段时间，确保锁屏完成
+                // 减少等待时间，确保锁屏完成但不会过长
                 System.Threading.Thread.Sleep(1000);
 
-                // 然后关闭屏幕
-                TurnOffScreen();
+                // 直接使用SendMessage方法关闭屏幕
+                LogOperation("锁屏后发送关闭屏幕消息");
+                IntPtr result = SendMessage((IntPtr)HWND_BROADCAST, WM_SYSCOMMAND, (IntPtr)SC_MONITORPOWER, (IntPtr)MONITOR_OFF);
+                LogOperation($"锁屏后发送关闭屏幕消息，返回值: {result}");
+                
+                // 记录屏幕关闭状态
+                screenOffTime = DateTime.Now;
+                lastMouseMoveTime = DateTime.MinValue;
+                isScreenOff = true;
+                
+                // 启动监控计时器
+                monitorTimer.Start();
+                
+                string message = $"系统已锁屏并关闭屏幕，时间：{screenOffTime:yyyy-MM-dd HH:mm:ss}";
+                LogOperation(message);
+                UpdateStatus(message);
             }
             catch (Exception ex)
             {
