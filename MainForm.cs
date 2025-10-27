@@ -162,7 +162,13 @@ namespace ScreenControl
                 }
                 
                 string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {operation}";
-                File.AppendAllText(LogFilePath, logEntry + Environment.NewLine);
+                
+                // 使用StreamWriter确保数据立即写入磁盘，防止系统崩溃时丢失数据
+                using (StreamWriter writer = new StreamWriter(LogFilePath, true))
+                {
+                    writer.WriteLine(logEntry);
+                    writer.Flush(); // 强制将缓冲区内容写入磁盘
+                }
             }
             catch (Exception ex)
             {
