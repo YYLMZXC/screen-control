@@ -24,6 +24,7 @@ namespace ScreenControl
         private Label statusLabel; // 用于显示状态信息的标签
         private Label uptimeLabel; // 用于显示运行时间的标签
         private NotifyIcon notifyIcon; // 托盘图标
+        private bool enableHotkeys = true; // 快捷键启用状态标志
         private ContextMenuStrip trayMenu; // 托盘右键菜单
 
         public MainForm()
@@ -50,6 +51,9 @@ namespace ScreenControl
             // 程序启动时自动检查更新（使用AutoUpdateManager类在后台线程中进行）
             AutoUpdateManager updateManager = new AutoUpdateManager(Version, UpdateStatus, LogOperation, this);
             updateManager.StartAutoCheck();
+            
+            // 注册全局热键（始终注册，但会根据enableHotkeys状态决定是否响应）
+            RegisterGlobalHotkeys();
         }
         
         // 初始化托盘图标和菜单
@@ -244,7 +248,8 @@ namespace ScreenControl
                 // 创建设置对象
                 var settings = new
                 {
-                    DelayWakeUpEnabled = chkDelayWakeUp?.Checked ?? true
+                    DelayWakeUpEnabled = chkDelayWakeUp?.Checked ?? true,
+                    EnableHotkeys = enableHotkeys
                 };
                 
                 // 序列化并保存到文件
@@ -270,6 +275,12 @@ namespace ScreenControl
                     if (settings != null && settings.DelayWakeUpEnabled != null)
                     {
                         chkDelayWakeUp.Checked = settings.DelayWakeUpEnabled;
+                    }
+                    
+                    // 加载快捷键启用状态，默认为启用
+                    if (settings != null && settings.EnableHotkeys != null)
+                    {
+                        enableHotkeys = settings.EnableHotkeys;
                     }
                 }
             }
@@ -534,6 +545,12 @@ namespace ScreenControl
         {
             try
             {
+                // 加载设置后更新快捷键开关状态
+                if (chkGlobalHotkeys != null)
+                {
+                    chkGlobalHotkeys.Checked = enableHotkeys;
+                }
+                
                 // 从嵌入式资源加载背景图片
                 using (Stream stream = typeof(MainForm).Assembly.GetManifestResourceStream("ScreenControl.res.screencontrol.png"))
                 {
@@ -613,66 +630,7 @@ namespace ScreenControl
         // 添加一个标志来跟踪窗口是否被主动隐藏（非最小化状态）
         private bool isWindowManuallyHidden = false;
         
-        // 窗口消息处理，用于捕获任务栏按钮点击
-        protected override void WndProc(ref Message m)
-        {            
-            const int WM_SYSCOMMAND = 0x0112;
-            const int SC_RESTORE = 0xF120;
-            const int SC_MINIMIZE = 0xF020;
-            const int SC_CLOSE = 0xF060;
-            const int WM_ACTIVATEAPP = 0x001C;
-            const int WM_ACTIVATE = 0x0006;
-            
-            // 处理系统命令消息（包括任务栏点击）
-            if (m.Msg == WM_SYSCOMMAND)
-            {                
-                // 从消息的低16位提取命令
-                int wparam = m.WParam.ToInt32();
-                int cmd = wparam & 0xFFF0; // 清除低位的标志位
-                
-                // 处理最小化命令 - 只在窗口正常状态下处理
-                if (cmd == SC_MINIMIZE && this.WindowState == FormWindowState.Normal)
-                {                    
-                    // 让系统正常处理最小化，我们会在OnResize中捕获
-                    base.WndProc(ref m);
-                    return;
-                }
-                // 处理恢复窗口命令（来自任务栏点击）
-                else if (cmd == SC_RESTORE)
-                {                    
-                    // 当窗口不可见（无论是手动隐藏还是最小化隐藏）时，显示窗口
-                    if (!this.Visible)
-                    {                        
-                        // 直接显示主窗口，不切换状态
-                        ShowMainForm();
-                        return; // 阻止默认处理
-                    }
-                }
-            }
-            
-            // 处理应用程序激活消息 - 这通常来自任务栏点击
-            else if (m.Msg == WM_ACTIVATEAPP)
-            {                
-                // 当通过任务栏点击激活应用程序，并且窗口当前是隐藏状态
-                if (m.WParam.ToInt32() == 1 && !this.Visible)
-                {                    
-                    // 直接显示主窗口，不切换状态
-                    ShowMainForm();
-                }
-            }
-            else if (m.Msg == WM_ACTIVATE)
-            {                
-                // 当窗口接收到激活消息，确保窗口是可见的
-                int wparam = m.WParam.ToInt32();
-                // 如果是激活消息（wparam != 0）并且窗口当前被隐藏
-                if (wparam != 0 && !this.Visible)
-                {                    
-                    ShowMainForm();
-                }
-            }
-            
-            base.WndProc(ref m);
-        }
+        // 窗口消息处理方法在全局热键实现中已包含，此处删除重复定义
         
         protected override void OnFormClosing(FormClosingEventArgs e)
         {            
@@ -686,6 +644,9 @@ namespace ScreenControl
                 notifyIcon.Dispose();
             }
             uptimeTimer.Stop();
+            
+            // 注销全局热键
+            UnregisterGlobalHotkeys();
             
             // 清理托盘图标
             if (notifyIcon != null)
@@ -706,8 +667,161 @@ namespace ScreenControl
             LogOperation(shutdownMessage);
         }
 
-        private void MainForm_KeyDown(object sender, KeyEventArgs e)
+        // 全局热键常量定义
+        private const int WM_HOTKEY = 0x0312;
+        private const int HOTKEY_ID_TURNOFFSCREEN = 1;
+        private const int HOTKEY_ID_LOCKSCREEN = 2;
+        private const int HOTKEY_ID_HELP = 3;
+        
+        // 注册/注销全局热键的API声明
+        [DllImport("user32.dll")]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vk);
+        
+        [DllImport("user32.dll")]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+        
+        // 注册全局热键
+        private void RegisterGlobalHotkeys()
         {
+            try
+            {
+                // 注册数字键1（无修饰键）用于关闭屏幕
+                RegisterHotKey(this.Handle, HOTKEY_ID_TURNOFFSCREEN, 0, (int)Keys.D1);
+                RegisterHotKey(this.Handle, HOTKEY_ID_TURNOFFSCREEN, 0, (int)Keys.NumPad1);
+                
+                // 注册数字键2（无修饰键）用于锁屏并关闭屏幕
+                RegisterHotKey(this.Handle, HOTKEY_ID_LOCKSCREEN, 0, (int)Keys.D2);
+                RegisterHotKey(this.Handle, HOTKEY_ID_LOCKSCREEN, 0, (int)Keys.NumPad2);
+                
+                // 注册Alt+H用于打开帮助
+                RegisterHotKey(this.Handle, HOTKEY_ID_HELP, (int)KeyModifier.Alt, (int)Keys.H);
+                
+                LogOperation("全局热键已注册");
+            }
+            catch (Exception ex)
+            {
+                LogOperation($"注册全局热键失败: {ex.Message}");
+            }
+        }
+        
+        // 注销全局热键
+        private void UnregisterGlobalHotkeys()
+        {
+            try
+            {
+                UnregisterHotKey(this.Handle, HOTKEY_ID_TURNOFFSCREEN);
+                UnregisterHotKey(this.Handle, HOTKEY_ID_LOCKSCREEN);
+                UnregisterHotKey(this.Handle, HOTKEY_ID_HELP);
+                
+                LogOperation("全局热键已注销");
+            }
+            catch (Exception ex)
+            {
+                LogOperation($"注销全局热键失败: {ex.Message}");
+            }
+        }
+        
+        // 热键修饰符枚举
+        [Flags]
+        public enum KeyModifier
+        {
+            None = 0,
+            Alt = 1,
+            Control = 2,
+            Shift = 4,
+            Win = 8
+        }
+        
+        // 窗口消息处理，用于捕获全局热键消息
+        protected override void WndProc(ref Message m)
+        {            
+            const int WM_SYSCOMMAND = 0x0112;
+            const int SC_RESTORE = 0xF120;
+            const int SC_MINIMIZE = 0xF020;
+            const int SC_CLOSE = 0xF060;
+            const int WM_ACTIVATEAPP = 0x001C;
+            const int WM_ACTIVATE = 0x0006;
+            
+            // 处理全局热键消息
+            if (m.Msg == WM_HOTKEY)
+            {
+                int id = m.WParam.ToInt32();
+                
+                // 检查是否启用快捷键
+                if (enableHotkeys)
+                {
+                    switch (id)
+                    {
+                        case HOTKEY_ID_TURNOFFSCREEN:
+                            TurnOffScreen();
+                            break;
+                        case HOTKEY_ID_LOCKSCREEN:
+                            LockAndTurnOffScreen();
+                            break;
+                        case HOTKEY_ID_HELP:
+                            ShowHelp();
+                            break;
+                    }
+                }
+            }
+            // 处理系统命令消息（包括任务栏点击）
+            else if (m.Msg == WM_SYSCOMMAND)
+            {                
+                // 从消息的低16位提取命令
+                int wparam = m.WParam.ToInt32();
+                int cmd = wparam & 0xFFF0; // 清除低位的标志位
+                
+                // 处理最小化命令 - 只在窗口正常状态下处理
+                if (cmd == SC_MINIMIZE && this.WindowState == FormWindowState.Normal)
+                {                    
+                    // 让系统正常处理最小化，我们会在OnResize中捕获
+                    base.WndProc(ref m);
+                    return;
+                }
+                // 处理恢复窗口命令（来自任务栏点击）
+                else if (cmd == SC_RESTORE)
+                {                    
+                    // 当窗口不可见（无论是手动隐藏还是最小化隐藏）时，显示窗口
+                    if (!this.Visible)
+                    {                         
+                        // 直接显示主窗口，不切换状态
+                        ShowMainForm();
+                        return; // 阻止默认处理
+                    }
+                }
+            }
+            
+            // 处理应用程序激活消息 - 这通常来自任务栏点击
+            else if (m.Msg == WM_ACTIVATEAPP)
+            {                
+                // 当通过任务栏点击激活应用程序，并且窗口当前是隐藏状态
+                if (m.WParam.ToInt32() == 1 && !this.Visible)
+                {                     
+                    // 直接显示主窗口，不切换状态
+                    ShowMainForm();
+                }
+            }
+            else if (m.Msg == WM_ACTIVATE)
+            {                
+                // 当窗口接收到激活消息，确保窗口是可见的
+                int wparam = m.WParam.ToInt32();
+                // 如果是激活消息（wparam != 0）并且窗口当前被隐藏
+                if (wparam != 0 && !this.Visible)
+                {                     
+                    ShowMainForm();
+                }
+            }
+            
+            base.WndProc(ref m);
+        }
+        
+        // 窗口焦点时的快捷键处理（保留原始功能）
+        private void MainForm_KeyDown(object sender, KeyEventArgs e)
+        {            
+            // 检查是否启用快捷键
+            if (!enableHotkeys)
+                return;
+                
             // 处理数字键1（关闭屏幕）
             if (e.KeyCode == Keys.D1 || e.KeyCode == Keys.NumPad1)
             {
@@ -729,6 +843,21 @@ namespace ScreenControl
                 e.Handled = true;
                 e.SuppressKeyPress = true;
             }
+        }
+        
+        private void chkGlobalHotkeys_CheckedChanged(object sender, EventArgs e)
+        {
+            // 更新快捷键启用状态
+            enableHotkeys = chkGlobalHotkeys.Checked;
+            
+            // 记录日志
+            string status = enableHotkeys ? "启用" : "禁用";
+            string message = $"全局快捷键监听已{status}";
+            LogOperation(message);
+            UpdateStatus(message);
+            
+            // 保存设置
+            SaveSettings();
         }
 
         private void btnHelp_Click(object sender, EventArgs e)

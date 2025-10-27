@@ -92,11 +92,27 @@ namespace ScreenControl
             this.chkDelayWakeUp.Text = "启用延迟唤醒检测（防止鼠标误唤醒）";
             this.chkDelayWakeUp.UseVisualStyleBackColor = true;
             this.chkDelayWakeUp.Checked = true;
+            
+            // 
+            // chkGlobalHotkeys
+            // 
+            this.chkGlobalHotkeys = new System.Windows.Forms.CheckBox();
+            this.chkGlobalHotkeys.AutoSize = true;
+            this.chkGlobalHotkeys.Location = new System.Drawing.Point(200, 310);
+            this.chkGlobalHotkeys.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.chkGlobalHotkeys.Name = "chkGlobalHotkeys";
+            this.chkGlobalHotkeys.Size = new System.Drawing.Size(240, 16);
+            this.chkGlobalHotkeys.TabIndex = 5;
+            this.chkGlobalHotkeys.Text = "启用全局快捷键监听（最小化时也可使用）";
+            this.chkGlobalHotkeys.UseVisualStyleBackColor = true;
+            this.chkGlobalHotkeys.Checked = true;
+            this.chkGlobalHotkeys.CheckedChanged += new System.EventHandler(this.chkGlobalHotkeys_CheckedChanged);
 
             this.Controls.Add(this.btnTurnOffScreen);
             this.Controls.Add(this.btnLockAndTurnOffScreen);
             this.Controls.Add(this.btnHelp);
             this.Controls.Add(this.chkDelayWakeUp);
+            this.Controls.Add(this.chkGlobalHotkeys);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.Name = "MainForm";
@@ -111,6 +127,7 @@ namespace ScreenControl
         private System.Windows.Forms.Button btnLockAndTurnOffScreen;
         private System.Windows.Forms.Button btnHelp;
         private System.Windows.Forms.CheckBox chkDelayWakeUp;
+        private System.Windows.Forms.CheckBox chkGlobalHotkeys;
     }
 }
 
