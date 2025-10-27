@@ -163,18 +163,44 @@ namespace ScreenControl
                         progressForm.Close();
                         
                         // 显示下载完成提示
+                                  // 显示下载完成提示
                         DialogResult result = MessageBox.Show(
-                            $"文件 {fileName} 下载完成！\n保存位置: {Path.GetDirectoryName(filePath)}\n\n是否打开文件位置？", 
+                            $"文件 {fileName} 下载完成！\n保存位置: {Path.GetDirectoryName(filePath)}\n\n是否打开文件位置？\n是否立即解压并安装更新？", 
                             "下载完成", 
-                            MessageBoxButtons.YesNo, 
-                            MessageBoxIcon.Information);
+                            MessageBoxButtons.YesNoCancel, 
+                            MessageBoxIcon.Information, 
+                            MessageBoxDefaultButton.Button1);
                         
                         if (result == DialogResult.Yes)
                         {
+                            // 打开文件位置
                             Process.Start("explorer.exe", "/select," + filePath);
                         }
+                        else if (result == DialogResult.No)
+                        {
+                            // 尝试解压并安装更新
+                            try
+                            {
+                                _statusUpdater?.Invoke("正在解压更新文件...");
+                                string extractPath = Path.Combine(Path.GetDirectoryName(filePath), "UpdateTemp");
+                                if (Directory.Exists(extractPath))
+                                {
+                                    Directory.Delete(extractPath, true);
+                                }
+                                Directory.CreateDirectory(extractPath);
+                                
+                                // 这里可以添加解压逻辑，使用System.IO.Compression或其他解压库
+                                // 由于没有引入解压库，这里只显示提示
+                                _statusUpdater?.Invoke("更新准备完成，请手动解压并安装。");
+                                MessageBox.Show("更新文件已下载，请手动解压并安装。", "更新提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
+                            catch (Exception ex)
+                            {
+                                _statusUpdater?.Invoke($"更新准备失败: {ex.Message}");
+                                MessageBox.Show($"更新准备失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                        }
                     });
-                    
                     _logWriter?.Invoke($"文件下载完成: {filePath}");
                 }
                 catch (Exception ex)
@@ -204,36 +230,72 @@ namespace ScreenControl
         {
             using (HttpClient client = new HttpClient())
             {
-                // 获取文件大小
-                using (HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
+                // 设置超时时间为30秒
+                client.Timeout = TimeSpan.FromSeconds(30);
+                
+                try
                 {
-                    response.EnsureSuccessStatusCode();
-                    
-                    long totalBytes = response.Content.Headers.ContentLength ?? 0;
-                    
-                    using (Stream contentStream = await response.Content.ReadAsStreamAsync())
-                    using (FileStream fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    // 获取文件大小
+                    using (HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
                     {
-                        byte[] buffer = new byte[8192];
-                        long totalRead = 0;
-                        int bytesRead;
-                        
-                        while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                        // 检查是否为403 Forbidden错误
+                        if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
                         {
-                            await fileStream.WriteAsync(buffer, 0, bytesRead);
-                            totalRead += bytesRead;
+                            throw new Exception("下载失败: 403 Forbidden (Rate Limit Exceeded)，IP访问频率限制，请稍后再试");
+                        }
+                        // 检查其他HTTP错误状态码
+                        else if (!response.IsSuccessStatusCode)
+                        {
+                            throw new Exception($"下载失败: 网络错误 ({response.StatusCode})，请检查网络连接后重试");
+                        }
+                        
+                        response.EnsureSuccessStatusCode();
+                        
+                        long totalBytes = response.Content.Headers.ContentLength ?? 0;
+                        
+                        using (Stream contentStream = await response.Content.ReadAsStreamAsync())
+                        using (FileStream fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                        {
+                            byte[] buffer = new byte[8192];
+                            long totalRead = 0;
+                            int bytesRead;
                             
-                            // 更新进度
-                            if (totalBytes > 0)
+                            while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                             {
-                                int progress = (int)((totalRead * 100) / totalBytes);
-                                _parentForm.Invoke((MethodInvoker)delegate {
-                                    progressCallback?.Invoke(progress);
-                                    statusCallback?.Invoke($"已下载 {FormatFileSize(totalRead)} / {FormatFileSize(totalBytes)}");
-                                });
+                                await fileStream.WriteAsync(buffer, 0, bytesRead);
+                                totalRead += bytesRead;
+                                
+                                // 更新进度
+                                if (totalBytes > 0)
+                                {
+                                    int progress = (int)((totalRead * 100) / totalBytes);
+                                    _parentForm.Invoke((MethodInvoker)delegate {
+                                        progressCallback?.Invoke(progress);
+                                        statusCallback?.Invoke($"已下载 {FormatFileSize(totalRead)} / {FormatFileSize(totalBytes)}");
+                                    });
+                                }
                             }
                         }
                     }
+                }
+                catch (HttpRequestException ex)
+                {
+                    if ((int)ex.StatusCode == 403)
+                    {
+                        throw new Exception("下载失败: 403 Forbidden (Rate Limit Exceeded)，IP访问频率限制，请稍后再试");
+                    }
+                    else
+                    {
+                        throw new Exception($"下载失败: 网络连接错误 - {ex.Message}，请检查网络连接后重试");
+                    }
+                }
+                catch (TaskCanceledException)
+                {
+                    throw new Exception("下载失败: 请求超时，请检查网络连接后重试");
+                }
+                catch (IOException ex)
+                {
+                    throw new Exception($"下载失败: 文件写入错误 - {ex.Message}");
                 }
             }
         }

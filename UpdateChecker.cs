@@ -51,11 +51,55 @@ namespace ScreenControl
                     var jsonResponse = await _httpClient.GetStringAsync(GiteeApiUrl);
                     updateInfo.LatestVersion = ExtractVersionFromApiResponse(jsonResponse);
                 }
+                catch (HttpRequestException ex)
+                {
+                    if (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                    {
+                        // 处理403 Forbidden错误
+                        throw new Exception("检查更新失败: 403 Forbidden (Rate Limit Exceeded)，IP访问频率限制，请稍后再试");
+                    }
+                    else
+                    {
+                        // 处理其他HTTP错误
+                        throw new Exception($"检查更新失败: 网络错误 ({ex.StatusCode})，请检查网络连接后重试");
+                    }
+                }
+                catch (TaskCanceledException)
+                {
+                    // 处理请求超时
+                    throw new Exception("检查更新失败: 请求超时，请检查网络连接后重试");
+                }
                 catch
                 {
                     // API失败时，尝试从HTML页面解析
-                    var htmlResponse = await _httpClient.GetStringAsync(GiteeReleasesUrl);
-                    updateInfo.LatestVersion = ExtractVersionFromHtml(htmlResponse);
+                    try
+                    {
+                        var htmlResponse = await _httpClient.GetStringAsync(GiteeReleasesUrl);
+                        updateInfo.LatestVersion = ExtractVersionFromHtml(htmlResponse);
+                    }
+                    catch (HttpRequestException ex)
+                    {
+                        if (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                        {
+                            // 处理403 Forbidden错误
+                            throw new Exception("检查更新失败: 403 Forbidden (Rate Limit Exceeded)，IP访问频率限制，请稍后再试");
+                        }
+                        else
+                        {
+                            // 处理其他HTTP错误
+                            throw new Exception($"检查更新失败: 网络错误 ({ex.StatusCode})，请检查网络连接后重试");
+                        }
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        // 处理请求超时
+                        throw new Exception("检查更新失败: 请求超时，请检查网络连接后重试");
+                    }
+                    catch
+                    {
+                        // 处理其他未预期的异常
+                        throw new Exception("检查更新失败: 网络连接异常，请检查网络连接后重试");
+                    }
                 }
 
                 // 如果获取到了版本号，进行版本比较
