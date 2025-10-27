@@ -15,7 +15,7 @@ namespace ScreenControl
         private bool isScreenOff = false;
         private const string LogFilePath = "bugs/screencontrol.log";
         private const string SettingsFilePath = "settings.json";
-        private const string Version = "1.3.0";
+        private const string Version = "1.3.1";
         private const string GiteeUrl = "https://gitee.com/yylmzxc/screen-control";
         private const string GithubUrl = "https://github.com/YYLMZXC/screen-control";
         private Label statusLabel; // 用于显示状态信息的标签
