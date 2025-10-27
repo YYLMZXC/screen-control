@@ -21,7 +21,11 @@ namespace ScreenControl
         private const string Version = "1.5.1";
         private const string GiteeUrl = "https://gitee.com/yylmzxc/screen-control";
         private const string GithubUrl = "https://github.com/YYLMZXC/screen-control";
-        private const int IDLE_TIME_THRESHOLD = 9000; // 空闲时间阈值（毫秒），小于此值认为有输入活动
+        
+        // 可配置的时间参数
+        private int idleTimeThreshold = 15000; // 空闲时间阈值（毫秒），默认15秒
+        private int screenOffInitialDelay = 5000; // 屏幕关闭后的初始化延迟（毫秒），默认5秒
+        private int delayWakeUpDuration = 3000; // 延迟唤醒检测的持续时间（毫秒），默认3秒
         private Label statusLabel; // 用于显示状态信息的标签
         private Label uptimeLabel; // 用于显示运行时间的标签
         private NotifyIcon notifyIcon; // 托盘图标
@@ -246,16 +250,21 @@ namespace ScreenControl
         {
             try
             {
-                // 创建设置对象
+                // 创建设置对象，包含所有可配置参数
                 var settings = new
                 {
                     DelayWakeUpEnabled = chkDelayWakeUp?.Checked ?? true,
-                    EnableHotkeys = enableHotkeys
+                    EnableHotkeys = enableHotkeys,
+                    IdleTimeThreshold = idleTimeThreshold,
+                    ScreenOffInitialDelay = screenOffInitialDelay,
+                    DelayWakeUpDuration = delayWakeUpDuration
                 };
                 
                 // 序列化并保存到文件
                 string settingsJson = Newtonsoft.Json.JsonConvert.SerializeObject(settings);
                 File.WriteAllText(SettingsFilePath, settingsJson);
+                
+                LogOperation($"设置已保存：空闲阈值={idleTimeThreshold}ms, 初始延迟={screenOffInitialDelay}ms, 唤醒延迟={delayWakeUpDuration}ms");
             }
             catch (Exception ex)
             {
@@ -273,16 +282,38 @@ namespace ScreenControl
                     string settingsJson = File.ReadAllText(SettingsFilePath);
                     var settings = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(settingsJson);
                     
-                    if (settings != null && settings.DelayWakeUpEnabled != null)
+                    if (settings != null)
                     {
-                        chkDelayWakeUp.Checked = settings.DelayWakeUpEnabled;
+                        // 加载延迟唤醒检测状态
+                        if (settings.DelayWakeUpEnabled != null)
+                        {
+                            chkDelayWakeUp.Checked = settings.DelayWakeUpEnabled;
+                        }
+                        
+                        // 加载快捷键启用状态
+                        if (settings.EnableHotkeys != null)
+                        {
+                            enableHotkeys = settings.EnableHotkeys;
+                        }
+                        
+                        // 加载时间参数设置
+                        if (settings.IdleTimeThreshold != null)
+                        {
+                            idleTimeThreshold = Convert.ToInt32(settings.IdleTimeThreshold);
+                        }
+                        
+                        if (settings.ScreenOffInitialDelay != null)
+                        {
+                            screenOffInitialDelay = Convert.ToInt32(settings.ScreenOffInitialDelay);
+                        }
+                        
+                        if (settings.DelayWakeUpDuration != null)
+                        {
+                            delayWakeUpDuration = Convert.ToInt32(settings.DelayWakeUpDuration);
+                        }
                     }
                     
-                    // 加载快捷键启用状态，默认为启用
-                    if (settings != null && settings.EnableHotkeys != null)
-                    {
-                        enableHotkeys = settings.EnableHotkeys;
-                    }
+                    LogOperation($"设置已加载：空闲阈值={idleTimeThreshold}ms, 初始延迟={screenOffInitialDelay}ms, 唤醒延迟={delayWakeUpDuration}ms");
                 }
             }
             catch (Exception ex)
@@ -388,6 +419,13 @@ namespace ScreenControl
         // 检查系统是否被唤醒（屏幕是否开启）
         private bool IsSystemAwake()
         {
+            // 首先检查是否在屏幕关闭的初始化延迟期内
+            if (isScreenOff && (DateTime.Now - screenOffInitialTime).TotalMilliseconds < screenOffInitialDelay)
+            {
+                LogOperation($"初始化延迟期内，忽略唤醒检测（{screenOffInitialDelay}ms）");
+                return false;
+            }
+            
             LASTINPUTINFO lastInputInfo = new LASTINPUTINFO();
             lastInputInfo.cbSize = (uint)Marshal.SizeOf(lastInputInfo);
             GetLastInputInfo(ref lastInputInfo);
@@ -395,35 +433,41 @@ namespace ScreenControl
             // 获取当前系统时间和最后一次输入时间的差值
             uint idleTime = (uint)Environment.TickCount - lastInputInfo.dwTime;
             
+            // 记录当前的空闲时间，帮助调试
+            // LogOperation($"空闲时间检测：{idleTime}ms，阈值：{idleTimeThreshold}ms");
+            
             // 如果空闲时间小于阈值，认为系统有输入（鼠标/键盘）
-            if (idleTime < IDLE_TIME_THRESHOLD)
+            if (idleTime < idleTimeThreshold)
             {
                 // 检查是否启用延迟唤醒检测
                 if (chkDelayWakeUp != null && chkDelayWakeUp.Checked)
                 {
-                    // 如果是第一次检测到鼠标移动，记录时间
+                    // 如果是第一次检测到活动，记录时间
                     if (lastMouseMoveTime == DateTime.MinValue)
                     {
                         lastMouseMoveTime = DateTime.Now;
+                        LogOperation($"检测到首次活动，开始延迟唤醒计时");
                         return false; // 不立即唤醒
                     }
                     
-                    // 计算距离第一次检测到鼠标移动的时间
+                    // 计算距离第一次检测到活动的时间
                     TimeSpan delayTime = DateTime.Now - lastMouseMoveTime;
                     
-                    // 如果超过3秒才真正唤醒
-                    if (delayTime.TotalMilliseconds >= 3000)
+                    // 使用用户配置的延迟唤醒持续时间
+                    if (delayTime.TotalMilliseconds >= delayWakeUpDuration)
                     {
+                        LogOperation($"延迟唤醒计时已完成（{delayWakeUpDuration}ms），唤醒屏幕");
                         lastMouseMoveTime = DateTime.MinValue; // 重置计时
                         return true; // 唤醒屏幕
                     }
                     return false; // 延迟期间不唤醒
                 }
+                LogOperation($"检测到活动且未启用延迟，立即唤醒（空闲时间：{idleTime}ms < {idleTimeThreshold}ms）");
                 return true; // 未启用延迟，立即唤醒
             }
             
-            // 没有输入活动，重置鼠标移动时间
-            if (idleTime >= IDLE_TIME_THRESHOLD)
+            // 没有输入活动，重置活动检测时间
+            if (idleTime >= idleTimeThreshold)
             {
                 lastMouseMoveTime = DateTime.MinValue;
             }
@@ -431,12 +475,15 @@ namespace ScreenControl
             return false;
         }
 
+        private DateTime screenOffInitialTime; // 记录屏幕关闭的初始化时间
+
         private void TurnOffScreen()
         {
             try
             {
-                // 记录屏幕关闭时间并重置鼠标移动时间
+                // 记录屏幕关闭时间并重置相关时间
                 screenOffTime = DateTime.Now;
+                screenOffInitialTime = DateTime.Now; // 记录初始化时间用于延迟检测
                 lastMouseMoveTime = DateTime.MinValue;
                 isScreenOff = true;
                 
@@ -875,9 +922,45 @@ namespace ScreenControl
             ShowHelp();
         }
 
+        private void btnSettings_Click(object sender, EventArgs e)
+        {
+            using (SettingsForm settingsForm = new SettingsForm(
+                idleTimeThreshold, 
+                screenOffInitialDelay, 
+                delayWakeUpDuration,
+                enableHotkeys, 
+                chkDelayWakeUp?.Checked ?? true))
+            {
+                if (settingsForm.ShowDialog() == DialogResult.OK)
+                {
+                    // 保存新的设置值
+                    idleTimeThreshold = settingsForm.IdleTimeThreshold;
+                    screenOffInitialDelay = settingsForm.ScreenOffInitialDelay;
+                    delayWakeUpDuration = settingsForm.DelayWakeUpDuration;
+                    enableHotkeys = settingsForm.EnableHotkeys;
+                    
+                    if (chkDelayWakeUp != null)
+                    {
+                        chkDelayWakeUp.Checked = settingsForm.DelayWakeUpEnabled;
+                    }
+                    
+                    SaveSettings();
+                    UpdateStatus("设置已更新");
+                    LogOperation($"用户通过界面更新设置：空闲阈值={idleTimeThreshold}ms, 初始延迟={screenOffInitialDelay}ms, 唤醒延迟={delayWakeUpDuration}ms");
+                }
+            }
+        }
+
         private void ShowHelp()
         {            // 创建帮助菜单
             ContextMenuStrip helpMenu = new ContextMenuStrip();
+            
+            // 添加设置菜单项（使用&标记设置快捷键为S）
+            ToolStripMenuItem settingsMenuItem = new ToolStripMenuItem("设置(&S)");
+            settingsMenuItem.Click += SettingsMenuItem_Click;
+            
+            // 添加分隔线
+            helpMenu.Items.Add(new ToolStripSeparator());
             
             // 添加关于菜单项（使用&标记设置快捷键为A）
             ToolStripMenuItem aboutMenuItem = new ToolStripMenuItem("关于(&A)");
@@ -888,11 +971,19 @@ namespace ScreenControl
             checkUpdateMenuItem.Click += CheckUpdateMenuItem_Click;
             
             // 将菜单项添加到菜单
+            helpMenu.Items.Add(settingsMenuItem);
             helpMenu.Items.Add(aboutMenuItem);
             helpMenu.Items.Add(checkUpdateMenuItem);
             
             // 显示菜单在按钮旁边
             helpMenu.Show(btnHelp, new System.Drawing.Point(0, btnHelp.Height));
+        }
+        
+        // 设置菜单项点击事件处理
+        private void SettingsMenuItem_Click(object sender, EventArgs e)
+        {
+            // 调用设置按钮的点击事件处理方法
+            btnSettings_Click(sender, e);
         }
         
         // 检查更新菜单项点击事件处理
