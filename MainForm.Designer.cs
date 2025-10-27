@@ -62,8 +62,22 @@ namespace ScreenControl
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(600, 360);
+            this.btnHelp = new System.Windows.Forms.Button();
+            // 
+            // btnHelp
+            // 
+            this.btnHelp.Location = new System.Drawing.Point(100, 230);
+            this.btnHelp.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.btnHelp.Name = "btnHelp";
+            this.btnHelp.Size = new System.Drawing.Size(150, 50);
+            this.btnHelp.TabIndex = 3;
+            this.btnHelp.Text = "帮助(&H)";
+            this.btnHelp.UseVisualStyleBackColor = true;
+            this.btnHelp.Click += new System.EventHandler(this.btnHelp_Click);
+            
             this.Controls.Add(this.btnTurnOffScreen);
             this.Controls.Add(this.btnLockAndTurnOffScreen);
+            this.Controls.Add(this.btnHelp);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.Name = "MainForm";
@@ -76,6 +90,7 @@ namespace ScreenControl
         #endregion
         private System.Windows.Forms.Button btnTurnOffScreen;
         private System.Windows.Forms.Button btnLockAndTurnOffScreen;
+        private System.Windows.Forms.Button btnHelp;
     }
 }
 

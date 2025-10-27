@@ -13,6 +13,9 @@ namespace ScreenControl
         private DateTime startTime;
         private bool isScreenOff = false;
         private const string LogFilePath = "bugs/screencontrol.log";
+        private const string Version = "1.0.0";
+        private const string GiteeUrl = "https://gitee.com/yylmzxc/screen-control";
+        private const string GithubUrl = "https://github.com/YYLMZXC/screen-control";
         private Label statusLabel; // 用于显示状态信息的标签
 
         public MainForm()
@@ -300,6 +303,94 @@ namespace ScreenControl
                 e.Handled = true;
                 e.SuppressKeyPress = true;
             }
+            // 处理H键（帮助）
+            else if (e.KeyCode == Keys.H && e.Alt)
+            {
+                ShowHelp();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+        }
+
+        private void btnHelp_Click(object sender, EventArgs e)
+        {
+            ShowHelp();
+        }
+
+        private void ShowHelp()
+        {
+            // 创建帮助菜单
+            ContextMenuStrip helpMenu = new ContextMenuStrip();
+            
+            // 添加菜单项
+            ToolStripMenuItem aboutMenuItem = new ToolStripMenuItem("关于");
+            aboutMenuItem.Click += AboutMenuItem_Click;
+            
+            // 将菜单项添加到菜单
+            helpMenu.Items.Add(aboutMenuItem);
+            
+            // 显示菜单在按钮旁边
+            helpMenu.Show(btnHelp, new System.Drawing.Point(0, btnHelp.Height));
+        }
+
+        private void AboutMenuItem_Click(object sender, EventArgs e)
+        {
+            // 创建关于对话框
+            Form aboutForm = new Form();
+            aboutForm.Text = "关于屏幕控制";
+            aboutForm.Size = new System.Drawing.Size(400, 300);
+            aboutForm.StartPosition = FormStartPosition.CenterParent;
+            aboutForm.FormBorderStyle = FormBorderStyle.FixedDialog;
+            aboutForm.MaximizeBox = false;
+            aboutForm.MinimizeBox = false;
+            
+            // 创建标签显示版本信息和项目地址
+            Label versionLabel = new Label();
+            versionLabel.Location = new System.Drawing.Point(20, 20);
+            versionLabel.Size = new System.Drawing.Size(350, 30);
+            versionLabel.Text = $"版本号: {Version}";
+            versionLabel.Font = new System.Drawing.Font(versionLabel.Font, System.Drawing.FontStyle.Bold);
+            
+            Label giteeLabel = new Label();
+            giteeLabel.Location = new System.Drawing.Point(20, 60);
+            giteeLabel.Size = new System.Drawing.Size(350, 30);
+            giteeLabel.Text = $"Gitee 地址: {GiteeUrl}";
+            giteeLabel.ForeColor = System.Drawing.Color.Blue;
+            giteeLabel.Cursor = System.Windows.Forms.Cursors.Hand;
+            giteeLabel.Click += (s, ev) => System.Diagnostics.Process.Start(GiteeUrl);
+            
+            Label githubLabel = new Label();
+            githubLabel.Location = new System.Drawing.Point(20, 100);
+            githubLabel.Size = new System.Drawing.Size(350, 30);
+            githubLabel.Text = $"GitHub 地址: {GithubUrl}";
+            githubLabel.ForeColor = System.Drawing.Color.Blue;
+            githubLabel.Cursor = System.Windows.Forms.Cursors.Hand;
+            githubLabel.Click += (s, ev) => System.Diagnostics.Process.Start(GithubUrl);
+            
+            Label descriptionLabel = new Label();
+            descriptionLabel.Location = new System.Drawing.Point(20, 140);
+            descriptionLabel.Size = new System.Drawing.Size(350, 80);
+            descriptionLabel.Text = "屏幕控制是一款简单实用的工具，支持快速关闭屏幕和锁屏并关闭屏幕功能。\n\n快捷键：\n1 - 关闭屏幕\n2 - 锁屏并关闭屏幕\nAlt+H - 帮助菜单";
+            descriptionLabel.TextAlign = System.Drawing.ContentAlignment.TopLeft;
+            descriptionLabel.AutoSize = false;
+            descriptionLabel.Multiline = true;
+            
+            // 添加关闭按钮
+            Button closeButton = new Button();
+            closeButton.Location = new System.Drawing.Point(150, 220);
+            closeButton.Size = new System.Drawing.Size(100, 30);
+            closeButton.Text = "关闭";
+            closeButton.Click += (s, ev) => aboutForm.Close();
+            
+            // 将控件添加到表单
+            aboutForm.Controls.Add(versionLabel);
+            aboutForm.Controls.Add(giteeLabel);
+            aboutForm.Controls.Add(githubLabel);
+            aboutForm.Controls.Add(descriptionLabel);
+            aboutForm.Controls.Add(closeButton);
+            
+            // 显示对话框
+            aboutForm.ShowDialog(this);
         }
     }
 }
