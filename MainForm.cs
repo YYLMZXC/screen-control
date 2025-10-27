@@ -21,11 +21,21 @@ namespace ScreenControl
         private const string Version = "1.5.0";
         private const string GiteeUrl = "https://gitee.com/yylmzxc/screen-control";
         private const string GithubUrl = "https://github.com/YYLMZXC/screen-control";
-        
+
         // 可配置的时间参数
-        private int idleTimeThreshold = 15000; // 空闲时间阈值（毫秒），默认15秒
-        private int screenOffInitialDelay = 5000; // 屏幕关闭后的初始化延迟（毫秒），默认5秒
-        private int delayWakeUpDuration = 3000; // 延迟唤醒检测的持续时间（毫秒），默认3秒
+        private int screenOffInitialDelay = 12000; // 屏幕关闭后的初始化延迟（毫秒），
+        private int idleTimeThreshold = 15000; // 空闲时间阈值（毫秒），   
+        private int delayWakeUpDuration = 5000; // 延迟唤醒检测的持续时间（毫秒），
+
+
+        // screenOffInitialDelay：屏蔽期——屏幕刚关时“装死”多久。，
+        // idleTimeThreshold：活动判定期——多长的空闲算“有人回来了”。
+        // delayWakeUpDuration：确认期——发现活动后，再观察多久才“真的开屏”。
+
+        //“先装死 screenOffInitialDelay  → 用 idleTimeThreshold 阈值判断有没有人 → 有人就再观察 delayWakeUpDuration s → 才给开屏”。
+
+
+
         private Label statusLabel; // 用于显示状态信息的标签
         private Label uptimeLabel; // 用于显示运行时间的标签
         private NotifyIcon notifyIcon; // 托盘图标
