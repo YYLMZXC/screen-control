@@ -65,20 +65,8 @@ namespace ScreenControl
                         // 记录日志
                         _logWriter?.Invoke($"自动检查更新：发现新版本 {updateInfo.LatestVersion}");
                         
-                        // 询问用户是否查看更新
-                        DialogResult result = MessageBox.Show(
-                            $"发现新版本 {updateInfo.LatestVersion}！\n您当前使用的版本是 {_currentVersion}。\n\n是否查看详情？", 
-                            "发现新版本", 
-                            MessageBoxButtons.YesNo, 
-                            MessageBoxIcon.Information);
-                        
-                        if (result == DialogResult.Yes)
-                        {
-                            System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo(updateInfo.ReleaseUrl);
-                            psi.UseShellExecute = true;
-                            System.Diagnostics.Process.Start(psi);
-                            _statusUpdater?.Invoke("已打开发布页面");
-                        }
+                        // 使用统一的更新对话框
+                    UpdateDownloader.ShowUpdateDialog(updateInfo, _currentVersion, _statusUpdater, _logWriter, _parentForm);
                     });
                 }
             }

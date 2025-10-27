@@ -486,20 +486,9 @@ namespace ScreenControl
                     UpdateStatus($"发现新版本: {updateInfo.LatestVersion}");
                     LogOperation($"检查更新：发现新版本 {updateInfo.LatestVersion}");
                     
-                    // 询问用户是否打开发布页面
-                    DialogResult result = MessageBox.Show(
-                        $"发现新版本 {updateInfo.LatestVersion}！\n您当前使用的版本是 {Version}。\n\n是否打开发布页面查看详情？", 
-                        "发现新版本", 
-                        MessageBoxButtons.YesNo, 
-                        MessageBoxIcon.Information);
-                    
-                    if (result == DialogResult.Yes)
-                    {
-                        System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo(updateInfo.ReleaseUrl);
-                        psi.UseShellExecute = true;
-                        System.Diagnostics.Process.Start(psi);
-                        UpdateStatus("已打开发布页面");
-                    }
+                    // 使用统一的更新对话框
+                    UpdateDownloader.ShowUpdateDialog(updateInfo, Version, UpdateStatus, LogOperation, this);
+
                 }
                 else
                 {
