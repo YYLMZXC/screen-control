@@ -339,9 +339,18 @@ namespace ScreenControl
 
         private void UpdateStatus(string message)
         {
-            if (statusLabel != null)
+            // 确保在UI线程中更新状态显示
+            if (this.InvokeRequired)
             {
-                statusLabel.Text = message;
+                this.Invoke(new Action<string>(UpdateStatus), message);
+            }
+            else
+            {
+                if (statusLabel != null)
+                {
+                    statusLabel.Text = message;
+                    statusLabel.Refresh();
+                }
             }
         }
 
@@ -437,6 +446,20 @@ namespace ScreenControl
                 // 记录屏幕关闭时间和状态
                 screenOffTime = DateTime.Now;
                 
+                // 在UI线程中获取Handle，避免线程间操作异常
+                IntPtr mainHandle = IntPtr.Zero;
+                if (this.InvokeRequired)
+                {
+                    this.Invoke(new Action(() =>
+                    {
+                        mainHandle = this.Handle;
+                    }));
+                }
+                else
+                {
+                    mainHandle = this.Handle;
+                }
+                
                 // 使用单独的方法来执行可能会卡死的操作，并设置超时
                 bool completed = ExecuteWithTimeout(() =>
                 {
@@ -445,7 +468,7 @@ namespace ScreenControl
                     
                     // 无论屏幕当前状态如何，都尝试关闭屏幕
                     // 使用SendMessage超时保护版本
-                    SendMessageTimeout(this.Handle, WM_SYSCOMMAND, (IntPtr)SC_MONITORPOWER, (IntPtr)MONITOR_OFF);
+                    SendMessageTimeout(mainHandle, WM_SYSCOMMAND, (IntPtr)SC_MONITORPOWER, (IntPtr)MONITOR_OFF);
                     
                     // 设置线程执行状态，防止系统睡眠但允许显示关闭
                     SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
