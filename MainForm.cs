@@ -23,16 +23,17 @@ namespace ScreenControl
         private const string GithubUrl = "https://github.com/YYLMZXC/screen-control";
 
         // 可配置的时间参数
-        private int screenOffInitialDelay = 12000; // 屏幕关闭后的初始化延迟（毫秒），
-        private int idleTimeThreshold = 15000; // 空闲时间阈值（毫秒），   
-        private int delayWakeUpDuration = 5000; // 延迟唤醒检测的持续时间（毫秒），
+        // screenOffInitialDelay：屏蔽期——屏幕刚关时"装死"多久（毫秒）
+        private int screenOffInitialDelay = 12000; // 屏幕关闭后的初始化延迟（12秒）
+        
+        // idleTimeThreshold：活动判定期——多长的空闲算"有人回来了"（毫秒）
+        private int idleTimeThreshold = 500; // 空闲时间阈值（0.5秒，用于鼠标活动检测）
+        
+        // delayWakeUpDuration：确认期——发现活动后，再观察多久才"真的开屏"（毫秒）
+        private int delayWakeUpDuration = 5000; // 延迟唤醒检测的持续时间（5秒，用于鼠标确认期）
+        // 实现逻辑："先装死 screenOffInitialDelay → 用 idleTimeThreshold 阈值判断有没有人 → 有人就再观察 delayWakeUpDuration 秒 → 才给开屏"
 
 
-        // screenOffInitialDelay：屏蔽期——屏幕刚关时“装死”多久。，
-        // idleTimeThreshold：活动判定期——多长的空闲算“有人回来了”。
-        // delayWakeUpDuration：确认期——发现活动后，再观察多久才“真的开屏”。
-
-        //“先装死 screenOffInitialDelay  → 用 idleTimeThreshold 阈值判断有没有人 → 有人就再观察 delayWakeUpDuration s → 才给开屏”。
 
 
 
@@ -425,7 +426,7 @@ namespace ScreenControl
         private const int MONITOR_OFF = 2;
         private const int MONITOR_ON = -1;
         private const int MONITOR_STANDBY = 1;
-
+        
         // 检查系统是否被唤醒（屏幕是否开启）
         private bool IsSystemAwake()
         {
@@ -443,43 +444,11 @@ namespace ScreenControl
             // 获取当前系统时间和最后一次输入时间的差值
             uint idleTime = (uint)Environment.TickCount - lastInputInfo.dwTime;
             
-            // 记录当前的空闲时间，帮助调试
-            // LogOperation($"空闲时间检测：{idleTime}ms，阈值：{idleTimeThreshold}ms");
-            
             // 如果空闲时间小于阈值，认为系统有输入（鼠标/键盘）
             if (idleTime < idleTimeThreshold)
             {
-                // 检查是否启用延迟唤醒检测
-                if (chkDelayWakeUp != null && chkDelayWakeUp.Checked)
-                {
-                    // 如果是第一次检测到活动，记录时间
-                    if (lastMouseMoveTime == DateTime.MinValue)
-                    {
-                        lastMouseMoveTime = DateTime.Now;
-                        LogOperation($"检测到首次活动，开始延迟唤醒计时");
-                        return false; // 不立即唤醒
-                    }
-                    
-                    // 计算距离第一次检测到活动的时间
-                    TimeSpan delayTime = DateTime.Now - lastMouseMoveTime;
-                    
-                    // 使用用户配置的延迟唤醒持续时间
-                    if (delayTime.TotalMilliseconds >= delayWakeUpDuration)
-                    {
-                        LogOperation($"延迟唤醒计时已完成（{delayWakeUpDuration}ms），唤醒屏幕");
-                        lastMouseMoveTime = DateTime.MinValue; // 重置计时
-                        return true; // 唤醒屏幕
-                    }
-                    return false; // 延迟期间不唤醒
-                }
-                LogOperation($"检测到活动且未启用延迟，立即唤醒（空闲时间：{idleTime}ms < {idleTimeThreshold}ms）");
-                return true; // 未启用延迟，立即唤醒
-            }
-            
-            // 没有输入活动，重置活动检测时间
-            if (idleTime >= idleTimeThreshold)
-            {
-                lastMouseMoveTime = DateTime.MinValue;
+                LogOperation($"检测到活动，立即唤醒（空闲时间：{idleTime}ms < {idleTimeThreshold}ms）");
+                return true;
             }
             
             return false;
@@ -491,7 +460,7 @@ namespace ScreenControl
         {
             try
             {
-                // 记录屏幕关闭时间并重置相关时间
+                // 记录屏幕关闭时间
                 screenOffTime = DateTime.Now;
                 screenOffInitialTime = DateTime.Now; // 记录初始化时间用于延迟检测
                 lastMouseMoveTime = DateTime.MinValue;
