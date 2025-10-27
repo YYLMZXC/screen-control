@@ -512,10 +512,7 @@ namespace ScreenControl
             try
             {
                 // 加载设置后更新快捷键开关状态
-                if (chkGlobalHotkeys != null)
-                {
-                    chkGlobalHotkeys.Checked = enableHotkeys;
-                }
+                // 已将快捷键开关移至设置界面
                 
                 // 从嵌入式资源加载背景图片
                 using (Stream stream = typeof(MainForm).Assembly.GetManifestResourceStream("ScreenControl.res.screencontrol.png"))
@@ -811,20 +808,7 @@ namespace ScreenControl
             }
         }
         
-        private void chkGlobalHotkeys_CheckedChanged(object sender, EventArgs e)
-        {
-            // 更新快捷键启用状态
-            enableHotkeys = chkGlobalHotkeys.Checked;
-            
-            // 记录日志
-            string status = enableHotkeys ? "启用" : "禁用";
-            string message = $"全局快捷键监听已{status}";
-            LogOperation(message);
-            UpdateStatus(message);
-            
-            // 保存设置
-            SaveSettings();
-        }
+
 
         private void btnHelp_Click(object sender, EventArgs e)
         {

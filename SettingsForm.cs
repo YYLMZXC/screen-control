@@ -100,9 +100,9 @@ namespace ScreenControl
             this.chkEnableHotkeys.AutoSize = true;
             this.chkEnableHotkeys.Location = new System.Drawing.Point(30, 30);
             this.chkEnableHotkeys.Name = "chkEnableHotkeys";
-            this.chkEnableHotkeys.Size = new System.Drawing.Size(99, 19);
+            this.chkEnableHotkeys.Size = new System.Drawing.Size(240, 19);
             this.chkEnableHotkeys.TabIndex = 0;
-            this.chkEnableHotkeys.Text = "启用快捷键";
+            this.chkEnableHotkeys.Text = "启用全局快捷键监听（最小化时也可使用）";
             this.chkEnableHotkeys.UseVisualStyleBackColor = true;
             // 
             // btnOK
