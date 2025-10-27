@@ -22,12 +22,7 @@ namespace ScreenControl
         private const string GiteeUrl = "https://gitee.com/yylmzxc/screen-control";
         private const string GithubUrl = "https://github.com/YYLMZXC/screen-control";
 
-        // 可配置的时间参数
-        // idleTimeThreshold：活动判定期——多长的空闲算"有人回来了"（毫秒）
-        private int idleTimeThreshold = 500; // 空闲时间阈值（0.5秒，用于鼠标活动检测）
-        
-        // delayWakeUpDuration：保留参数（暂时未使用）
-        private int delayWakeUpDuration = 5000;
+
 
 
 
@@ -261,17 +256,14 @@ namespace ScreenControl
                 var settings = new
                 {
                     DelayWakeUpEnabled = chkDelayWakeUp?.Checked ?? true,
-                    EnableHotkeys = enableHotkeys,
-                    IdleTimeThreshold = idleTimeThreshold,
-        
-                    DelayWakeUpDuration = delayWakeUpDuration
+                    EnableHotkeys = enableHotkeys
                 };
                 
                 // 序列化并保存到文件
                 string settingsJson = Newtonsoft.Json.JsonConvert.SerializeObject(settings);
                 File.WriteAllText(SettingsFilePath, settingsJson);
                 
-                LogOperation($"设置已保存：空闲阈值={idleTimeThreshold}ms, 唤醒延迟={delayWakeUpDuration}ms");
+                LogOperation($"设置已保存：快捷键={enableHotkeys}, 延迟唤醒={chkDelayWakeUp?.Checked ?? true}");
             }
             catch (Exception ex)
             {
@@ -302,22 +294,9 @@ namespace ScreenControl
                         {
                             enableHotkeys = settings.EnableHotkeys;
                         }
-                        
-                        // 加载时间参数设置
-                        if (settings.IdleTimeThreshold != null)
-                        {
-                            idleTimeThreshold = Convert.ToInt32(settings.IdleTimeThreshold);
-                        }
-                        
-
-                        
-                        if (settings.DelayWakeUpDuration != null)
-                        {
-                            delayWakeUpDuration = Convert.ToInt32(settings.DelayWakeUpDuration);
-                        }
                     }
                     
-                    LogOperation($"设置已加载：空闲阈值={idleTimeThreshold}ms, 唤醒延迟={delayWakeUpDuration}ms");
+                    LogOperation($"设置已加载：快捷键={enableHotkeys}, 延迟唤醒={chkDelayWakeUp?.Checked ?? true}");
                 }
             }
             catch (Exception ex)
@@ -427,17 +406,9 @@ namespace ScreenControl
             lastInputInfo.cbSize = (uint)Marshal.SizeOf(lastInputInfo);
             GetLastInputInfo(ref lastInputInfo);
             
-            // 获取当前系统时间和最后一次输入时间的差值
-            uint idleTime = (uint)Environment.TickCount - lastInputInfo.dwTime;
-            
-            // 如果空闲时间小于阈值，认为系统有输入（鼠标/键盘）
-            if (idleTime < idleTimeThreshold)
-            {
-                LogOperation($"检测到活动，立即唤醒（空闲时间：{idleTime}ms < {idleTimeThreshold}ms）");
-                return true;
-            }
-            
-            return false;
+            // 只要检测到任何输入（鼠标/键盘），立即唤醒屏幕
+            LogOperation("检测到活动，立即唤醒屏幕");
+            return true;
         }
 
         private void TurnOffScreen()
@@ -887,17 +858,12 @@ namespace ScreenControl
         private void btnSettings_Click(object sender, EventArgs e)
         {
             using (SettingsForm settingsForm = new SettingsForm(
-                idleTimeThreshold, 
-                delayWakeUpDuration,
                 enableHotkeys, 
                 chkDelayWakeUp?.Checked ?? true))
             {
                 if (settingsForm.ShowDialog() == DialogResult.OK)
                 {
                     // 保存新的设置值
-                    idleTimeThreshold = settingsForm.IdleTimeThreshold;
-
-                    delayWakeUpDuration = settingsForm.DelayWakeUpDuration;
                     enableHotkeys = settingsForm.EnableHotkeys;
                     
                     if (chkDelayWakeUp != null)
@@ -907,7 +873,7 @@ namespace ScreenControl
                     
                     SaveSettings();
                     UpdateStatus("设置已更新");
-                    LogOperation($"用户通过界面更新设置：空闲阈值={idleTimeThreshold}ms, 唤醒延迟={delayWakeUpDuration}ms");
+                    LogOperation($"用户通过界面更新设置：快捷键={enableHotkeys}, 延迟唤醒={chkDelayWakeUp?.Checked ?? true}");
                 }
             }
         }
