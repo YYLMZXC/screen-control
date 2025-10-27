@@ -103,7 +103,7 @@ namespace ScreenControl
             this.groupBox1.Controls.Add(this.chkEnableHotkeys);
             this.groupBox1.Location = new System.Drawing.Point(12, 12);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(280, 110);
+            this.groupBox1.Size = new System.Drawing.Size(350, 110);
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "屏幕控制设置";
@@ -115,7 +115,7 @@ namespace ScreenControl
             this.labelCloseScreenDelay.Name = "labelCloseScreenDelay";
             this.labelCloseScreenDelay.Size = new System.Drawing.Size(123, 15);
             this.labelCloseScreenDelay.TabIndex = 2;
-            this.labelCloseScreenDelay.Text = "延迟关闭屏幕（秒）：";
+            this.labelCloseScreenDelay.Text = "延迟关闭屏幕：(秒)";
             // 
             // numCloseScreenDelay
             // 
@@ -125,7 +125,7 @@ namespace ScreenControl
             this.numCloseScreenDelay.Minimum = new decimal(new int[] {
             0, 0, 0, 0});
             this.numCloseScreenDelay.Name = "numCloseScreenDelay";
-            this.numCloseScreenDelay.Size = new System.Drawing.Size(60, 21);
+            this.numCloseScreenDelay.Size = new System.Drawing.Size(130, 21);
             this.numCloseScreenDelay.TabIndex = 1;
             this.numCloseScreenDelay.Value = new decimal(new int[] {
             5, 0, 0, 0});
@@ -142,7 +142,7 @@ namespace ScreenControl
             // 
             // btnOK
             // 
-            this.btnOK.Location = new System.Drawing.Point(120, 170);
+            this.btnOK.Location = new System.Drawing.Point(140, 170);
             this.btnOK.Name = "btnOK";
             this.btnOK.Size = new System.Drawing.Size(75, 30);
             this.btnOK.TabIndex = 1;
@@ -152,7 +152,7 @@ namespace ScreenControl
             // 
             // btnCancel
             // 
-            this.btnCancel.Location = new System.Drawing.Point(210, 170);
+            this.btnCancel.Location = new System.Drawing.Point(230, 170);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(75, 30);
             this.btnCancel.TabIndex = 2;
@@ -164,7 +164,7 @@ namespace ScreenControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(310, 220);
+            this.ClientSize = new System.Drawing.Size(380, 220);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnOK);
             this.Controls.Add(this.groupBox1);
