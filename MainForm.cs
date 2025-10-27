@@ -15,7 +15,7 @@ namespace ScreenControl
         private DateTime screenOffTime;
         private DateTime startTime;
         private DateTime lastMouseMoveTime;
-        private Point lastCursorPos = Point.Empty;
+
         private bool isScreenOff = false;
         private const string LogFilePath = "bugs/screencontrol.log";
         private const string SettingsFilePath = "settings.json";
@@ -377,39 +377,13 @@ namespace ScreenControl
         private const int MONITOR_ON = -1;
         private const int MONITOR_STANDBY = 1;
         
-        [DllImport("user32.dll")]
-        private static extern bool GetCursorPos(out Point lpPoint);
-        
-        [DllImport("user32.dll")]
-        private static extern short GetAsyncKeyState(int vKey);
+
         
         // 检查系统是否被唤醒（屏幕是否开启）
         private bool IsSystemAwake()
         {            
-            // 检查是否有鼠标移动
-            if (!GetCursorPos(out Point cursorPos))
-            {
-                cursorPos = Point.Empty;
-            }
-
-            // 检查是否有键盘按键
-            bool anyKeyPressed = false;
-            for (int i = 0; i < 256; i++)
-            {
-                if (GetAsyncKeyState(i) != 0)
-                {
-                    anyKeyPressed = true;
-                    break;
-                }
-            }
-
-            // 如果检测到鼠标移动或键盘按键，立即唤醒屏幕
-            if (anyKeyPressed || cursorPos != lastCursorPos)
-            {
-                lastCursorPos = cursorPos;
-                return true;
-            }
-
+            // 移除唤醒检测机制，只保留记录功能
+            // 始终返回false，让系统本身处理唤醒
             return false;
         }
 
