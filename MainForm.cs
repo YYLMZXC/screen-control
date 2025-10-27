@@ -448,6 +448,13 @@ namespace ScreenControl
                 // 启动监控计时器
                 monitorTimer.Start();
                 
+                // 确保运行时间计时器继续运行（显式确认，防止任何隐含停止）
+                if (!uptimeTimer.Enabled)
+                {
+                    uptimeTimer.Start();
+                    LogOperation("已确保运行时间计时器继续运行");
+                }
+                
                 string message = $"屏幕已关闭，时间：{screenOffTime:yyyy-MM-dd HH:mm:ss}";
                 LogOperation(message);
                 UpdateStatus(message);
@@ -534,6 +541,13 @@ namespace ScreenControl
                 
                 // 恢复正常电源状态
                 SetThreadExecutionState(ES_CONTINUOUS);
+                
+                // 确保运行时间计时器继续运行（再次确认）
+                if (!uptimeTimer.Enabled)
+                {
+                    uptimeTimer.Start();
+                    LogOperation("屏幕唤醒后确保运行时间计时器继续运行");
+                }
                 
                 string message = $"屏幕已唤醒，关闭时长：{duration.TotalMinutes:F2}分钟（{duration.Hours}小时{duration.Minutes}分钟{duration.Seconds}秒）";
                 LogOperation(message);
