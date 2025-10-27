@@ -130,12 +130,17 @@ namespace ScreenControl
         /// </summary>
         /// <param name="fileName">文件名</param>
         public void ShowDownloadDialog(string fileName)
-        {
+        {            
+            // 创建进度对话框并关联父窗口
             DownloadProgressForm progressForm = new DownloadProgressForm();
             progressForm.Text = $"正在下载 {_version} 版本...";
+            progressForm.Owner = _parentForm;
             
             // 开始下载任务
             Task.Run(async () => {
+                string filePath = null;
+                Exception downloadException = null;
+                
                 try
                 {
                     // 创建版本文件夹（在当前程序目录下）
@@ -144,7 +149,7 @@ namespace ScreenControl
                     Directory.CreateDirectory(versionFolder);
                     
                     // 下载文件路径
-                    string filePath = Path.Combine(versionFolder, fileName);
+                    filePath = Path.Combine(versionFolder, fileName);
                     
                     // 更新状态
                     _parentForm.Invoke((MethodInvoker)delegate {
@@ -157,61 +162,83 @@ namespace ScreenControl
                     // 执行下载
                     await DownloadFileAsync(_downloadBaseUrl + "/" + fileName, filePath, progressForm.UpdateProgress, progressForm.UpdateStatus);
                     
-                    // 下载完成
+                    // 下载完成，更新状态
                     _parentForm.Invoke((MethodInvoker)delegate {
                         _statusUpdater?.Invoke($"下载完成: {fileName}");
-                        progressForm.Close();
-                        
-                        // 显示下载完成提示
-                                  // 显示下载完成提示
-                        DialogResult result = MessageBox.Show(
-                            $"文件 {fileName} 下载完成！\n保存位置: {Path.GetDirectoryName(filePath)}\n\n是否打开文件位置？\n是否立即解压并安装更新？", 
-                            "下载完成", 
-                            MessageBoxButtons.YesNoCancel, 
-                            MessageBoxIcon.Information, 
-                            MessageBoxDefaultButton.Button1);
-                        
-                        if (result == DialogResult.Yes)
-                        {
-                            // 打开文件位置
-                            Process.Start("explorer.exe", "/select," + filePath);
-                        }
-                        else if (result == DialogResult.No)
-                        {
-                            // 尝试解压并安装更新
-                            try
-                            {
-                                _statusUpdater?.Invoke("正在解压更新文件...");
-                                string extractPath = Path.Combine(Path.GetDirectoryName(filePath), "UpdateTemp");
-                                if (Directory.Exists(extractPath))
-                                {
-                                    Directory.Delete(extractPath, true);
-                                }
-                                Directory.CreateDirectory(extractPath);
-                                
-                                // 这里可以添加解压逻辑，使用System.IO.Compression或其他解压库
-                                // 由于没有引入解压库，这里只显示提示
-                                _statusUpdater?.Invoke("更新准备完成，请手动解压并安装。");
-                                MessageBox.Show("更新文件已下载，请手动解压并安装。", "更新提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            }
-                            catch (Exception ex)
-                            {
-                                _statusUpdater?.Invoke($"更新准备失败: {ex.Message}");
-                                MessageBox.Show($"更新准备失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            }
-                        }
                     });
+                    
                     _logWriter?.Invoke($"文件下载完成: {filePath}");
                 }
                 catch (Exception ex)
                 {
+                    downloadException = ex;
                     _parentForm.Invoke((MethodInvoker)delegate {
                         _statusUpdater?.Invoke($"下载失败: {ex.Message}");
-                        progressForm.Close();
-                        MessageBox.Show("下载失败: " + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     });
                     
                     _logWriter?.Invoke($"文件下载失败: {ex.Message}");
+                }
+                finally
+                {
+                    // 下载完成后自动关闭进度对话框
+                    progressForm.Invoke((MethodInvoker)delegate {
+                        progressForm.Close();
+                    });
+                    
+                    // 处理下载结果
+                    _parentForm.Invoke((MethodInvoker)delegate {
+                        if (downloadException != null)
+                        {
+                            // 显示错误消息
+                            MessageBox.Show(
+                                _parentForm, // 关联父窗口
+                                "下载失败: " + downloadException.Message, 
+                                "错误", 
+                                MessageBoxButtons.OK, 
+                                MessageBoxIcon.Error);
+                        }
+                        else if (filePath != null)
+                        {
+                            // 如果下载成功，显示完成对话框
+                            DialogResult result = MessageBox.Show(
+                                _parentForm, // 关联父窗口
+                                $"文件 {fileName} 下载完成！\n保存位置: {Path.GetDirectoryName(filePath)}\n\n是否打开文件位置？\n是否立即解压并安装更新？", 
+                                "下载完成", 
+                                MessageBoxButtons.YesNoCancel, 
+                                MessageBoxIcon.Information, 
+                                MessageBoxDefaultButton.Button1);
+                            
+                            if (result == DialogResult.Yes)
+                            {
+                                // 打开文件位置
+                                Process.Start("explorer.exe", "/select," + filePath);
+                            }
+                            else if (result == DialogResult.No)
+                            {
+                                // 尝试解压并安装更新
+                                try
+                                {
+                                    _statusUpdater?.Invoke("正在解压更新文件...");
+                                    string extractPath = Path.Combine(Path.GetDirectoryName(filePath), "UpdateTemp");
+                                    if (Directory.Exists(extractPath))
+                                    {
+                                        Directory.Delete(extractPath, true);
+                                    }
+                                    Directory.CreateDirectory(extractPath);
+                                     
+                                    // 这里可以添加解压逻辑，使用System.IO.Compression或其他解压库
+                                    // 由于没有引入解压库，这里只显示提示
+                                    _statusUpdater?.Invoke("更新准备完成，请手动解压并安装。");
+                                    MessageBox.Show(_parentForm, "更新文件已下载，请手动解压并安装。", "更新提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _statusUpdater?.Invoke($"更新准备失败: {ex.Message}");
+                                    MessageBox.Show(_parentForm, $"更新准备失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                }
+                            }
+                        }
+                    });
                 }
             });
             
