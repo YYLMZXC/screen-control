@@ -33,6 +33,7 @@ namespace ScreenControl
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             this.btnTurnOffScreen = new System.Windows.Forms.Button();
             this.btnLockAndTurnOffScreen = new System.Windows.Forms.Button();
+            this.chkDelayWakeUp = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // btnTurnOffScreen
@@ -79,9 +80,23 @@ namespace ScreenControl
             this.btnHelp.UseVisualStyleBackColor = true;
             this.btnHelp.Click += new System.EventHandler(this.btnHelp_Click);
             
+            // 
+            // chkDelayWakeUp
+            // 
+            this.chkDelayWakeUp.AutoSize = true;
+            this.chkDelayWakeUp.Location = new System.Drawing.Point(200, 280);
+            this.chkDelayWakeUp.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.chkDelayWakeUp.Name = "chkDelayWakeUp";
+            this.chkDelayWakeUp.Size = new System.Drawing.Size(216, 16);
+            this.chkDelayWakeUp.TabIndex = 4;
+            this.chkDelayWakeUp.Text = "启用延迟唤醒检测（防止鼠标误唤醒）";
+            this.chkDelayWakeUp.UseVisualStyleBackColor = true;
+            this.chkDelayWakeUp.Checked = true;
+
             this.Controls.Add(this.btnTurnOffScreen);
             this.Controls.Add(this.btnLockAndTurnOffScreen);
             this.Controls.Add(this.btnHelp);
+            this.Controls.Add(this.chkDelayWakeUp);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.Name = "MainForm";
@@ -95,6 +110,7 @@ namespace ScreenControl
         private System.Windows.Forms.Button btnTurnOffScreen;
         private System.Windows.Forms.Button btnLockAndTurnOffScreen;
         private System.Windows.Forms.Button btnHelp;
+        private System.Windows.Forms.CheckBox chkDelayWakeUp;
     }
 }
 

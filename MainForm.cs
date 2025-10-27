@@ -11,9 +11,10 @@ namespace ScreenControl
         private System.Windows.Forms.Timer uptimeTimer;
         private DateTime screenOffTime;
         private DateTime startTime;
+        private DateTime lastMouseMoveTime;
         private bool isScreenOff = false;
         private const string LogFilePath = "bugs/screencontrol.log";
-        private const string Version = "1.2.1";
+        private const string Version = "1.2.2";
         private const string GiteeUrl = "https://gitee.com/yylmzxc/screen-control";
         private const string GithubUrl = "https://github.com/YYLMZXC/screen-control";
         private Label statusLabel; // 用于显示状态信息的标签
@@ -110,16 +111,49 @@ namespace ScreenControl
             // 获取当前系统时间和最后一次输入时间的差值
             uint idleTime = (uint)Environment.TickCount - lastInputInfo.dwTime;
             
-            // 如果空闲时间小于2秒，认为系统刚刚被唤醒
-            return idleTime < 2000;
+            // 如果空闲时间小于2秒，认为系统有输入（鼠标/键盘）
+            if (idleTime < 2000)
+            {
+                // 检查是否启用延迟唤醒检测
+                if (chkDelayWakeUp != null && chkDelayWakeUp.Checked)
+                {
+                    // 如果是第一次检测到鼠标移动，记录时间
+                    if (lastMouseMoveTime == DateTime.MinValue)
+                    {
+                        lastMouseMoveTime = DateTime.Now;
+                        return false; // 不立即唤醒
+                    }
+                    
+                    // 计算距离第一次检测到鼠标移动的时间
+                    TimeSpan delayTime = DateTime.Now - lastMouseMoveTime;
+                    
+                    // 如果超过3秒才真正唤醒
+                    if (delayTime.TotalMilliseconds >= 3000)
+                    {
+                        lastMouseMoveTime = DateTime.MinValue; // 重置计时
+                        return true; // 唤醒屏幕
+                    }
+                    return false; // 延迟期间不唤醒
+                }
+                return true; // 未启用延迟，立即唤醒
+            }
+            
+            // 没有输入活动，重置鼠标移动时间
+            if (idleTime >= 2000)
+            {
+                lastMouseMoveTime = DateTime.MinValue;
+            }
+            
+            return false;
         }
 
         private void TurnOffScreen()
         {
             try
             {
-                // 记录屏幕关闭时间
+                // 记录屏幕关闭时间并重置鼠标移动时间
                 screenOffTime = DateTime.Now;
+                lastMouseMoveTime = DateTime.MinValue;
                 isScreenOff = true;
                 
                 // 发送消息关闭屏幕
