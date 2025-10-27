@@ -46,6 +46,10 @@ namespace ScreenControl
         private void ChkDelayWakeUp_CheckedChanged(object sender, EventArgs e)
         {
             SaveSettings();
+            // 更新状态标签以显示复选框的当前状态
+            string statusText = chkDelayWakeUp.Checked ? "延迟唤醒检测已启用" : "延迟唤醒检测已禁用";
+            UpdateStatus(statusText);
+            LogOperation(statusText);
         }
         
         // 保存设置
