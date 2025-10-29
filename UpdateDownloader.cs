@@ -92,13 +92,16 @@ namespace ScreenControl
             // 如果用户选择直接下载
             if (dialogResult)
             {
-                // 构建下载URL（假设发布文件名为ScreenControl.zip）
+                // 构建下载URL
                 string downloadBaseUrl = "https://gitee.com/yylmzxc/screen-control/releases/download/" + updateInfo.LatestVersion;
-                string fileName = "ScreenControl.zip"; // 这里可以根据实际发布文件命名约定修改
+                
+                // 优先使用exe文件，格式为Setup-ScreenControl-{版本号}.exe
+                string exeFileName = $"Setup-ScreenControl-{updateInfo.LatestVersion}.exe";
+                string zipFileName = "ScreenControl.zip"; // 备用zip文件
                 
                 // 创建下载器并开始下载
                 UpdateDownloader downloader = new UpdateDownloader(downloadBaseUrl, updateInfo.LatestVersion, statusUpdater, logWriter, parentForm);
-                downloader.ShowDownloadDialog(fileName);
+                downloader.ShowDownloadDialogWithFallback(exeFileName, zipFileName);
             }
         }
 
@@ -126,10 +129,23 @@ namespace ScreenControl
         }
 
         /// <summary>
+        /// 显示下载对话框并开始下载（带备用文件支持）
+        /// </summary>
+        /// <param name="primaryFileName">首选文件名（通常是exe）</param>
+        /// <param name="fallbackFileName">备用文件名（通常是zip）</param>
+        public void ShowDownloadDialogWithFallback(string primaryFileName, string fallbackFileName)
+        {
+            // 首先尝试下载exe文件
+            ShowDownloadDialog(primaryFileName, true, fallbackFileName);
+        }
+        
+        /// <summary>
         /// 显示下载对话框并开始下载
         /// </summary>
         /// <param name="fileName">文件名</param>
-        public void ShowDownloadDialog(string fileName)
+        /// <param name="isPrimary">是否为主文件（失败时是否尝试备用文件）</param>
+        /// <param name="fallbackFileName">备用文件名（当isPrimary为true时有效）</param>
+        private void ShowDownloadDialog(string fileName, bool isPrimary = false, string fallbackFileName = null)
         {            
             // 创建进度对话框并关联父窗口
             DownloadProgressForm progressForm = new DownloadProgressForm();
@@ -189,6 +205,24 @@ namespace ScreenControl
                     _parentForm.Invoke((MethodInvoker)delegate {
                         if (downloadException != null)
                         {
+                            // 如果是主文件下载失败且有备用文件，则尝试下载备用文件
+                            if (isPrimary && !string.IsNullOrEmpty(fallbackFileName))
+                            {
+                                DialogResult result = MessageBox.Show(
+                                    _parentForm,
+                                    $"{fileName} 下载失败: {downloadException.Message}\n\n是否尝试下载备用文件 {fallbackFileName}？",
+                                    "下载失败",
+                                    MessageBoxButtons.YesNo,
+                                    MessageBoxIcon.Question);
+                                    
+                                if (result == DialogResult.Yes)
+                                {
+                                    // 尝试下载备用文件
+                                    ShowDownloadDialog(fallbackFileName, false);
+                                    return;
+                                }
+                            }
+                            
                             // 显示错误消息
                             MessageBox.Show(
                                 _parentForm, // 关联父窗口
@@ -199,10 +233,22 @@ namespace ScreenControl
                         }
                         else if (filePath != null)
                         {
-                            // 如果下载成功，显示完成对话框
+                            // 根据文件类型显示不同的完成对话框
+                            string message;
+                            if (fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                            {
+                                // EXE文件的提示信息
+                                message = $"安装文件 {fileName} 下载完成！\n保存位置: {Path.GetDirectoryName(filePath)}\n\n是否打开文件位置？\n是否立即运行安装程序？";
+                            }
+                            else
+                            {
+                                // 其他文件（如ZIP）的提示信息
+                                message = $"文件 {fileName} 下载完成！\n保存位置: {Path.GetDirectoryName(filePath)}\n\n是否打开文件位置？\n是否立即解压并安装更新？";
+                            }
+                            
                             DialogResult result = MessageBox.Show(
                                 _parentForm, // 关联父窗口
-                                $"文件 {fileName} 下载完成！\n保存位置: {Path.GetDirectoryName(filePath)}\n\n是否打开文件位置？\n是否立即解压并安装更新？", 
+                                message, 
                                 "下载完成", 
                                 MessageBoxButtons.YesNoCancel, 
                                 MessageBoxIcon.Information, 
@@ -215,26 +261,38 @@ namespace ScreenControl
                             }
                             else if (result == DialogResult.No)
                             {
-                                // 尝试解压并安装更新
                                 try
                                 {
-                                    _statusUpdater?.Invoke("正在解压更新文件...");
-                                    string extractPath = Path.Combine(Path.GetDirectoryName(filePath), "UpdateTemp");
-                                    if (Directory.Exists(extractPath))
+                                    if (fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                                     {
-                                        Directory.Delete(extractPath, true);
+                                        // 对于EXE文件，直接运行
+                                        _statusUpdater?.Invoke("正在启动安装程序...");
+                                        ProcessStartInfo psi = new ProcessStartInfo(filePath);
+                                        psi.UseShellExecute = true;
+                                        Process.Start(psi);
+                                        _statusUpdater?.Invoke("安装程序已启动，请按照提示完成安装。");
                                     }
-                                    Directory.CreateDirectory(extractPath);
-                                     
-                                    // 这里可以添加解压逻辑，使用System.IO.Compression或其他解压库
-                                    // 由于没有引入解压库，这里只显示提示
-                                    _statusUpdater?.Invoke("更新准备完成，请手动解压并安装。");
-                                    MessageBox.Show(_parentForm, "更新文件已下载，请手动解压并安装。", "更新提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                    else
+                                    {
+                                        // 对于其他文件（如ZIP），尝试解压
+                                        _statusUpdater?.Invoke("正在解压更新文件...");
+                                        string extractPath = Path.Combine(Path.GetDirectoryName(filePath), "UpdateTemp");
+                                        if (Directory.Exists(extractPath))
+                                        {
+                                            Directory.Delete(extractPath, true);
+                                        }
+                                        Directory.CreateDirectory(extractPath);
+                                          
+                                        // 这里可以添加解压逻辑，使用System.IO.Compression或其他解压库
+                                        // 由于没有引入解压库，这里只显示提示
+                                        _statusUpdater?.Invoke("更新准备完成，请手动解压并安装。");
+                                        MessageBox.Show(_parentForm, "更新文件已下载，请手动解压并安装。", "更新提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                    }
                                 }
                                 catch (Exception ex)
                                 {
-                                    _statusUpdater?.Invoke($"更新准备失败: {ex.Message}");
-                                    MessageBox.Show(_parentForm, $"更新准备失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                    _statusUpdater?.Invoke($"操作失败: {ex.Message}");
+                                    MessageBox.Show(_parentForm, $"操作失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                 }
                             }
                         }
