@@ -64,51 +64,21 @@ namespace ScreenControl
             notifyIcon = new NotifyIcon();
             notifyIcon.Text = "屏幕控制 v" + Version;
             
-            // 尝试多种方式加载图标
+            // 直接从嵌入式资源加载图标，不再从文件系统加载
             try
             {
-                // 首先尝试使用文件系统中的图标文件
-                string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "screencontrol.ico");
-                if (File.Exists(iconPath))
+                using (Stream stream = typeof(MainForm).Assembly.GetManifestResourceStream("ScreenControl.res.screencontrol.ico"))
                 {
-                    notifyIcon.Icon = new System.Drawing.Icon(iconPath);
-                    LogOperation("从文件系统加载托盘图标成功");
-                }
-                else
-                {
-                    // 尝试使用res文件夹中的图标
-                    iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "res", "screencontrol.ico");
-                    if (File.Exists(iconPath))
+                    if (stream != null)
                     {
-                        notifyIcon.Icon = new System.Drawing.Icon(iconPath);
-                        LogOperation("从res文件夹加载托盘图标成功");
+                        notifyIcon.Icon = new System.Drawing.Icon(stream);
+                        LogOperation("从嵌入式资源加载托盘图标成功");
                     }
                     else
                     {
-                        // 最后尝试从嵌入式资源加载
-                        try
-                        {
-                            using (Stream stream = typeof(MainForm).Assembly.GetManifestResourceStream("ScreenControl.res.screencontrol.ico"))
-                            {
-                                if (stream != null)
-                                {
-                                    notifyIcon.Icon = new System.Drawing.Icon(stream);
-                                    LogOperation("从嵌入式资源加载托盘图标成功");
-                                }
-                                else
-                                {
-                                    LogOperation("无法找到嵌入式图标资源");
-                                    // 使用默认图标
-                                    notifyIcon.Icon = SystemIcons.Application;
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            LogOperation($"从嵌入式资源加载托盘图标失败：{ex.Message}");
-                            // 使用默认图标
-                            notifyIcon.Icon = SystemIcons.Application;
-                        }
+                        LogOperation("无法找到嵌入式图标资源");
+                        // 使用默认图标
+                        notifyIcon.Icon = SystemIcons.Application;
                     }
                 }
             }

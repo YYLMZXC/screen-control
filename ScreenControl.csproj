@@ -15,14 +15,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="screencontrol.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="screencontrol.ico">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <EmbeddedResource Include="res\screencontrol.png">
+    <!-- 仅将图标作为嵌入式资源，不再作为Content复制到输出目录 -->
+    <EmbeddedResource Include="screencontrol.ico">
+      <LogicalName>ScreenControl.res.screencontrol.ico</LogicalName>
+    </EmbeddedResource>
+    <!-- 保留png作为嵌入式资源 -->
+    <EmbeddedResource Include="screencontrol.png">
       <LogicalName>ScreenControl.res.screencontrol.png</LogicalName>
     </EmbeddedResource>
   </ItemGroup>

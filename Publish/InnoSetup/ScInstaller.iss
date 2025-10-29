@@ -39,7 +39,7 @@ OutputDir=..\Output\
 OutputBaseFilename=Setup-{#MyAppName}-{#MyAppVersion}
 
 ; 图标路径：
-SetupIconFile=..\..\res\screencontrol.ico
+SetupIconFile=..\..\screencontrol.ico
 
 Compression=lzma
 SolidCompression=yes
@@ -49,8 +49,11 @@ PrivilegesRequired=admin
 Name: "desktopicon"; Description: "{cm:DesktopIcon}"; GroupDescription: "{cm:DesktopIconGroup}"; Flags: unchecked
 
 [Files]
-; 发布产物路径
-Source: "..\..\bin\Release\net9.0-windows\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+; 排除res文件夹，只打包必要的文件
+Source: "..\..\bin\Release\net9.0-windows\*.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\bin\Release\net9.0-windows\*.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\bin\Release\net9.0-windows\*.config"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{cm:AppIconName}"; Filename: "{app}\{#MyAppExeName}"

@@ -10,9 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ScreenControl.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <ResFiles Include="..\res\**\*.*" />
-  </ItemGroup>
+  <!-- 移除了对res文件夹的引用，资源现在通过嵌入式方式包含 -->
   <Target Name="PublishAndPackage" AfterTargets="Build">
     <!-- 1️构建 ScreenControl -->
     <Message Text="=> Building ScreenControl (Release)..." Importance="high" />
@@ -22,13 +20,11 @@
     <!-- 2️路径 -->
     <PropertyGroup>
       <ScreenControlOutDir>$(MSBuildProjectDirectory)\..\bin\Release\net9.0-windows\</ScreenControlOutDir>
-      <ScreenControlResOutDir>$(ScreenControlOutDir)res\</ScreenControlResOutDir>
       <InnoSetupDir>$(MSBuildProjectDirectory)\InnoSetup</InnoSetupDir>
       <InnoSetupExe>$(InnoSetupDir)\ISCC.exe</InnoSetupExe>
       <InstallerScript>$(InnoSetupDir)\ScInstaller.iss</InstallerScript>
     </PropertyGroup>
     <MakeDir Directories="$(ScreenControlOutDir)" Condition="!Exists('$(ScreenControlOutDir)')" />
-    <MakeDir Directories="$(ScreenControlResOutDir)" Condition="!Exists('$(ScreenControlResOutDir)')" />
     <!-- 3调用 Inno Setup -->
     <Message Text="=> Running Inno Setup compiler..." Importance="high" />
     <Exec Command="&quot;$(InnoSetupExe)&quot; &quot;$(InstallerScript)&quot;"
