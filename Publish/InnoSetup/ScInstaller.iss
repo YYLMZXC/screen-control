@@ -34,12 +34,12 @@ AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={cm:DefaultGroupName}
 
-; 输出目录：上级 Output 文件夹
-OutputDir=..\Output\
+; 输出目录：上级  文件夹
+OutputDir=..\EXEPublish\
 OutputBaseFilename=Setup-{#MyAppName}-{#MyAppVersion}
 
 ; 图标路径：
-SetupIconFile=..\..\screencontrol.ico
+SetupIconFile=..\..\res\screencontrol.ico
 
 Compression=lzma
 SolidCompression=yes

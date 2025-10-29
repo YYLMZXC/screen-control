@@ -6,7 +6,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <ApplicationIcon>screencontrol.ico</ApplicationIcon>
+    <ApplicationIcon>res\screencontrol.ico</ApplicationIcon>
     <AssemblyName>ScreenControl</AssemblyName>
     <RootNamespace>ScreenControl</RootNamespace>
     <Deterministic>true</Deterministic>
@@ -16,11 +16,11 @@
 
   <ItemGroup>
     <!-- 仅将图标作为嵌入式资源，不再作为Content复制到输出目录 -->
-    <EmbeddedResource Include="screencontrol.ico">
+    <EmbeddedResource Include="res\screencontrol.ico">
       <LogicalName>ScreenControl.res.screencontrol.ico</LogicalName>
     </EmbeddedResource>
     <!-- 保留png作为嵌入式资源 -->
-    <EmbeddedResource Include="screencontrol.png">
+    <EmbeddedResource Include="res\screencontrol.png">
       <LogicalName>ScreenControl.res.screencontrol.png</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
