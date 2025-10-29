@@ -19,7 +19,7 @@ namespace ScreenControl
         private bool isScreenOff = false;
         private const string LogFilePath = "bugs/screencontrol.log";
         private const string SettingsFilePath = "settings.json";
-        private const string Version = "1.6.1";
+        private const string Version = "1.6.2";
         private const string GiteeUrl = "https://gitee.com/yylmzxc/screen-control";
         private const string GithubUrl = "https://github.com/YYLMZXC/screen-control";
 
@@ -32,10 +32,6 @@ namespace ScreenControl
         // 关闭屏幕快捷键设置
         private int turnOffScreenKey = (int)Keys.D1;
         private KeyModifier turnOffScreenModifier = KeyModifier.None;
-        
-        // 锁屏并关闭屏幕快捷键设置
-        private int lockScreenKey = (int)Keys.D2;
-        private KeyModifier lockScreenModifier = KeyModifier.None;
         private ContextMenuStrip trayMenu; // 托盘右键菜单
 
         public MainForm()
@@ -48,7 +44,7 @@ namespace ScreenControl
             
             // 加载设置
             LoadSettings();
-                       
+                        
             startTime = DateTime.Now;
             LogOperation($"应用程序启动，启动时间：{startTime:yyyy-MM-dd HH:mm:ss}");
             UpdateStatus("应用程序已启动，就绪");
@@ -135,11 +131,6 @@ namespace ScreenControl
             ToolStripMenuItem turnOffScreenItem = new ToolStripMenuItem("关闭屏幕");
             turnOffScreenItem.Click += (s, e) => TurnOffScreen();
             trayMenu.Items.Add(turnOffScreenItem);
-            
-            // 添加锁屏并关闭屏幕菜单项
-            ToolStripMenuItem lockAndTurnOffScreenItem = new ToolStripMenuItem("锁屏并关闭屏幕");
-            lockAndTurnOffScreenItem.Click += (s, e) => LockAndTurnOffScreen();
-            trayMenu.Items.Add(lockAndTurnOffScreenItem);
             
             // 添加分隔线
             trayMenu.Items.Add(new ToolStripSeparator());
@@ -246,9 +237,7 @@ namespace ScreenControl
                     EnableHotkeys = enableHotkeys,
                     CloseScreenDelay = closeScreenDelay,
                     TurnOffScreenKey = turnOffScreenKey,
-                    TurnOffScreenModifier = (int)turnOffScreenModifier,
-                    LockScreenKey = lockScreenKey,
-                    LockScreenModifier = (int)lockScreenModifier
+                    TurnOffScreenModifier = (int)turnOffScreenModifier
                 };
                 
                 // 序列化并保存到文件
@@ -296,17 +285,6 @@ namespace ScreenControl
                         if (settings.TurnOffScreenModifier != null)
                         {
                             turnOffScreenModifier = (KeyModifier)settings.TurnOffScreenModifier;
-                        }
-                        
-                        // 加载锁屏并关闭屏幕快捷键
-                        if (settings.LockScreenKey != null)
-                        {
-                            lockScreenKey = settings.LockScreenKey;
-                        }
-                        
-                        if (settings.LockScreenModifier != null)
-                        {
-                            lockScreenModifier = (KeyModifier)settings.LockScreenModifier;
                         }
                     }
                     
@@ -370,11 +348,7 @@ namespace ScreenControl
             }
         }
 
-     
-
-        // 锁屏
-        [DllImport("user32.dll")]
-        private static extern void LockWorkStation();
+      
 
         // 设置窗口前台
         [DllImport("user32.dll")]
@@ -387,9 +361,9 @@ namespace ScreenControl
 
         
 
-       
-     
+        
 
+      
               
         // 检查系统是否被唤醒（屏幕是否开启）
         private bool IsSystemAwake()
@@ -503,38 +477,6 @@ namespace ScreenControl
             }
         }
 
-        private void LockAndTurnOffScreen()
-        {
-            try
-            {
-                // 记录操作
-                LogOperation("开始执行锁屏并关闭屏幕操作");
-                
-                // 先执行锁屏操作
-                LogOperation("执行锁屏操作");
-                LockWorkStation();
-                LogOperation("系统已锁屏");
-                
-                // 等待锁屏完成
-                System.Threading.Thread.Sleep(1000);
-                
-             
-                
-                // 更新状态信息
-                screenOffTime = DateTime.Now;
-                string message = $"系统已锁屏并关闭屏幕，时间：{screenOffTime:yyyy-MM-dd HH:mm:ss}";
-                LogOperation(message);
-                UpdateStatus(message);
-            }
-            catch (Exception ex)
-            {
-                string errorMsg = $"锁屏并关闭屏幕失败：{ex.Message}";
-                UpdateStatus(errorMsg);
-                LogOperation(errorMsg);
-                MessageBox.Show(errorMsg, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
         private void LogOperation(string operation)
         {
             try
@@ -568,12 +510,6 @@ namespace ScreenControl
             TurnOffScreen();
         }
 
-        private void btnLockAndTurnOffScreen_Click(object sender, EventArgs e)
-        {
-            // 点击按钮后先锁屏再关闭屏幕
-            LockAndTurnOffScreen();
-        }
-
         private void MonitorTimer_Tick(object sender, EventArgs e)
         {
             if (isScreenOff && IsSystemAwake())
@@ -585,7 +521,7 @@ namespace ScreenControl
                 monitorTimer.Stop();
                 isScreenOff = false;
                 
-           
+            
                 logCounter = 0;
                 
                 string message = $"屏幕已唤醒，关闭时长：{duration.TotalMinutes:F2}分钟（{duration.Hours}小时{duration.Minutes}分钟{duration.Seconds}秒）";
@@ -598,7 +534,7 @@ namespace ScreenControl
         {
             try
             {
-               
+                
                 
                 // 从嵌入式资源加载背景图片
                 using (Stream stream = typeof(MainForm).Assembly.GetManifestResourceStream("ScreenControl.res.screencontrol.png"))
@@ -715,7 +651,6 @@ namespace ScreenControl
         // 全局热键常量定义
         private const int WM_HOTKEY = 0x0312;
         private const int HOTKEY_ID_TURNOFFSCREEN = 1;
-        private const int HOTKEY_ID_LOCKSCREEN = 2;
         private const int HOTKEY_ID_HELP = 3;
         
         // 注册/注销全局热键的API声明
@@ -743,16 +678,6 @@ namespace ScreenControl
                     RegisterHotKey(this.Handle, HOTKEY_ID_TURNOFFSCREEN, (int)turnOffScreenModifier, numPadKey);
                 }
                 
-                // 注册自定义锁屏并关闭屏幕快捷键
-                RegisterHotKey(this.Handle, HOTKEY_ID_LOCKSCREEN, (int)lockScreenModifier, lockScreenKey);
-                
-                // 如果是数字键，同时注册小键盘上的对应键
-                if (lockScreenKey >= (int)Keys.D0 && lockScreenKey <= (int)Keys.D9)
-                {
-                    int numPadKey = lockScreenKey - (int)Keys.D0 + (int)Keys.NumPad0;
-                    RegisterHotKey(this.Handle, HOTKEY_ID_LOCKSCREEN, (int)lockScreenModifier, numPadKey);
-                }
-                
                 // 注册Alt+H用于打开帮助（保持默认）
                 RegisterHotKey(this.Handle, HOTKEY_ID_HELP, (int)KeyModifier.Alt, (int)Keys.H);
                 
@@ -770,7 +695,6 @@ namespace ScreenControl
             try
             {
                 UnregisterHotKey(this.Handle, HOTKEY_ID_TURNOFFSCREEN);
-                UnregisterHotKey(this.Handle, HOTKEY_ID_LOCKSCREEN);
                 UnregisterHotKey(this.Handle, HOTKEY_ID_HELP);
                 
                 LogOperation("全局热键已注销");
@@ -815,9 +739,6 @@ namespace ScreenControl
                         case HOTKEY_ID_TURNOFFSCREEN:
                             TurnOffScreen();
                             break;
-                        case HOTKEY_ID_LOCKSCREEN:
-                            LockAndTurnOffScreen();
-                            break;
                         case HOTKEY_ID_HELP:
                             ShowHelp();
                             break;
@@ -843,7 +764,7 @@ namespace ScreenControl
                 {                    
                     // 当窗口不可见（无论是手动隐藏还是最小化隐藏）时，显示窗口
                     if (!this.Visible)
-                    {                         
+                    {                          
                         // 直接显示主窗口，不切换状态
                         ShowMainForm();
                         return; // 阻止默认处理
@@ -856,7 +777,7 @@ namespace ScreenControl
             {                
                 // 当通过任务栏点击激活应用程序，并且窗口当前是隐藏状态
                 if (m.WParam.ToInt32() == 1 && !this.Visible)
-                {                     
+                {                      
                     // 直接显示主窗口，不切换状态
                     ShowMainForm();
                 }
@@ -867,7 +788,7 @@ namespace ScreenControl
                 int wparam = m.WParam.ToInt32();
                 // 如果是激活消息（wparam != 0）并且窗口当前被隐藏
                 if (wparam != 0 && !this.Visible)
-                {                     
+                {                      
                     ShowMainForm();
                 }
             }
@@ -886,13 +807,6 @@ namespace ScreenControl
             if (e.KeyCode == Keys.D1 || e.KeyCode == Keys.NumPad1)
             {
                 TurnOffScreen();
-                e.Handled = true;
-                e.SuppressKeyPress = true;
-            }
-            // 处理数字键2（锁屏并关闭屏幕）
-            else if (e.KeyCode == Keys.D2 || e.KeyCode == Keys.NumPad2)
-            {
-                LockAndTurnOffScreen();
                 e.Handled = true;
                 e.SuppressKeyPress = true;
             }
@@ -916,7 +830,7 @@ namespace ScreenControl
         {
             using (SettingsForm settingsForm = new SettingsForm(
                 enableHotkeys, closeScreenDelay, 
-                turnOffScreenKey, turnOffScreenModifier, lockScreenKey, lockScreenModifier))
+                turnOffScreenKey, turnOffScreenModifier))
             {
                 if (settingsForm.ShowDialog() == DialogResult.OK)
                 {
@@ -925,8 +839,6 @@ namespace ScreenControl
                     closeScreenDelay = settingsForm.CloseScreenDelay;
                     turnOffScreenKey = settingsForm.TurnOffScreenKey;
                     turnOffScreenModifier = settingsForm.TurnOffScreenModifier;
-                    lockScreenKey = settingsForm.LockScreenKey;
-                    lockScreenModifier = settingsForm.LockScreenModifier;
                     
                     // 重新注册热键
                     if (enableHotkeys)
@@ -1069,7 +981,7 @@ namespace ScreenControl
             Label descriptionLabel = new Label();
             descriptionLabel.Location = new System.Drawing.Point(20, 140);
             descriptionLabel.Size = new System.Drawing.Size(350, 80);
-            descriptionLabel.Text = "屏幕控制是一款简单实用的工具，支持快速关闭屏幕和锁屏并关闭屏幕功能。\n\n快捷键：alt+1,alt+2,alt+h,alt+a\n1 - 关闭屏幕\n2 - 锁屏并关闭屏幕\nAlt+H - 帮助菜单";
+            descriptionLabel.Text = "屏幕控制是一款简单实用的工具，支持快速关闭屏幕功能。\n\n快捷键：alt+1,alt+h,alt+a\n1 - 关闭屏幕\nAlt+H - 帮助菜单";
             descriptionLabel.TextAlign = System.Drawing.ContentAlignment.TopLeft;
             descriptionLabel.AutoSize = false;
             
