@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
@@ -8,24 +7,19 @@
     <OutputPath>..\bin\Publish\</OutputPath>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\ScreenControl.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <ResFiles Include="..\res\**\*.*" />
   </ItemGroup>
-
   <Target Name="PublishAndPackage" AfterTargets="Build">
-
-    <!-- 1️⃣ 构建 ScreenControl -->
+    <!-- 1️构建 ScreenControl -->
     <Message Text="=> Building ScreenControl (Release)..." Importance="high" />
     <MSBuild Projects="..\ScreenControl.csproj"
              Targets="Clean;Build"
              Properties="Configuration=Release;Platform=AnyCPU;TargetFramework=net9.0-windows" />
-
-    <!-- 2️⃣ 路径 -->
+    <!-- 2️路径 -->
     <PropertyGroup>
       <ScreenControlOutDir>$(MSBuildProjectDirectory)\..\bin\Release\net9.0-windows\</ScreenControlOutDir>
       <ScreenControlResOutDir>$(ScreenControlOutDir)res\</ScreenControlResOutDir>
@@ -33,20 +27,13 @@
       <InnoSetupExe>$(InnoSetupDir)\ISCC.exe</InnoSetupExe>
       <InstallerScript>$(InnoSetupDir)\ScInstaller.iss</InstallerScript>
     </PropertyGroup>
-
     <MakeDir Directories="$(ScreenControlOutDir)" Condition="!Exists('$(ScreenControlOutDir)')" />
     <MakeDir Directories="$(ScreenControlResOutDir)" Condition="!Exists('$(ScreenControlResOutDir)')" />
-
-
-
-    <!-- 4️⃣ 调用 Inno Setup -->
+    <!-- 3调用 Inno Setup -->
     <Message Text="=> Running Inno Setup compiler..." Importance="high" />
     <Exec Command="&quot;$(InnoSetupExe)&quot; &quot;$(InstallerScript)&quot;"
           WorkingDirectory="$(InnoSetupDir)"
           ContinueOnError="false" />
-
-    <Message Text="=> ✅ PublishAndPackage completed successfully." Importance="high" />
-
+    <Message Text="=> PublishAndPackage completed successfully." Importance="high" />
   </Target>
-
 </Project>

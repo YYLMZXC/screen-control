@@ -3,7 +3,7 @@
 ; ============================================================
 
 #define MyAppName "ScreenControl"
-#define MyAppVersion "1.6.2"
+#define MyAppVersion "1.6.3"
 #define MyAppPublisher "ScreenControl Team"
 #define MyAppExeName "ScreenControl.exe"
 
