@@ -5,6 +5,8 @@ VisualStudioVersion = 17.13.35919.96 d17.13
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScreenControl", "ScreenControl.csproj", "{DB8FF636-E90A-4F95-A3C4-6716198EE2F3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Publish", "Publish\Publish.csproj", "{E1D2B5C7-7F8A-4345-BD9A-89A2F8C4D6E1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{DB8FF636-E90A-4F95-A3C4-6716198EE2F3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DB8FF636-E90A-4F95-A3C4-6716198EE2F3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DB8FF636-E90A-4F95-A3C4-6716198EE2F3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E1D2B5C7-7F8A-4345-BD9A-89A2F8C4D6E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E1D2B5C7-7F8A-4345-BD9A-89A2F8C4D6E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E1D2B5C7-7F8A-4345-BD9A-89A2F8C4D6E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E1D2B5C7-7F8A-4345-BD9A-89A2F8C4D6E1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
