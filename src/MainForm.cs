@@ -1290,9 +1290,9 @@ namespace ScreenControl
                 }
                 else
                 {
-                    UpdateStatus("您使用的是最新版本");
-                    LogOperation("检查更新：当前已是最新版本");
-                    MessageBox.Show($"您当前使用的版本 {Version} 已是最新版本！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    UpdateStatus($"您使用的是最新版本 {updateInfo.LatestVersion}");
+                    LogOperation($"检查更新：当前已是最新版本 {updateInfo.LatestVersion}");
+                    MessageBox.Show($"最新版本为 {updateInfo.LatestVersion}，您当前使用的版本 {Version} 已是最新版本！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch (Exception ex)
