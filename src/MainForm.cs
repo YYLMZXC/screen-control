@@ -31,7 +31,7 @@ namespace ScreenControl
         
         // 启动系统屏保快捷键设置
         private int turnOffScreenKey = (int)Keys.D1;
-        private KeyModifier turnOffScreenModifier = KeyModifier.None;
+        private KeyModifier turnOffScreenModifier = KeyModifier.Alt;
 
         // DPMS 休眠快捷键设置
         private int dpmsKey = (int)Keys.D2;
@@ -759,6 +759,7 @@ namespace ScreenControl
         private const int HOTKEY_ID_DPMS = 2;          // DPMS 休眠
         private const int HOTKEY_ID_HELP = 3;          // 帮助菜单
         private const int HOTKEY_ID_BRIGHTNESS = 4;    // 亮度调节
+        private const int HOTKEY_ID_NUMPAD_OFFSET = 100; // 小键盘热键 id 偏移（需与主键盘区分）
         
         // 注册/注销全局热键的API声明
         [DllImport("user32.dll")]
@@ -792,13 +793,34 @@ namespace ScreenControl
         // 注册单个热键；若按键是主键盘数字键，同时注册小键盘对应键
         private void RegisterHotkeyWithNumpad(int id, int key, KeyModifier modifier)
         {
-            RegisterHotKey(this.Handle, id, (int)modifier, key);
-            
+            // 校验：无修饰键且不是功能键时跳过，避免裸键在任意程序误触发
+            if (key <= 0 ||
+                (modifier == KeyModifier.None && !(key >= (int)Keys.F1 && key <= (int)Keys.F24)))
+            {
+                LogOperation($"快捷键 {FormatKeyName(key)} 缺少修饰键，已跳过注册");
+                return;
+            }
+
+            if (!RegisterHotKey(this.Handle, id, (int)modifier, key))
+            {
+                LogOperation($"注册热键失败: {FormatKeyName(key)}（可能已被其他程序占用）");
+            }
+
             if (key >= (int)Keys.D0 && key <= (int)Keys.D9)
             {
                 int numPadKey = key - (int)Keys.D0 + (int)Keys.NumPad0;
-                RegisterHotKey(this.Handle, id, (int)modifier, numPadKey);
+                RegisterHotKey(this.Handle, id + HOTKEY_ID_NUMPAD_OFFSET, (int)modifier, numPadKey);
             }
+        }
+
+        // 按键名显示，主键盘数字键显示为 1-9 而非 D1-D9
+        private static string FormatKeyName(int key)
+        {
+            if (key >= (int)Keys.D0 && key <= (int)Keys.D9)
+                return ((char)('0' + key - (int)Keys.D0)).ToString();
+            if (key >= (int)Keys.NumPad0 && key <= (int)Keys.NumPad9)
+                return "小键盘" + (key - (int)Keys.NumPad0);
+            return ((Keys)key).ToString();
         }
         
         // 注销全局热键
@@ -810,6 +832,11 @@ namespace ScreenControl
                 UnregisterHotKey(this.Handle, HOTKEY_ID_DPMS);
                 UnregisterHotKey(this.Handle, HOTKEY_ID_HELP);
                 UnregisterHotKey(this.Handle, HOTKEY_ID_BRIGHTNESS);
+                // 注销小键盘对应的热键
+                UnregisterHotKey(this.Handle, HOTKEY_ID_TURNOFFSCREEN + HOTKEY_ID_NUMPAD_OFFSET);
+                UnregisterHotKey(this.Handle, HOTKEY_ID_DPMS + HOTKEY_ID_NUMPAD_OFFSET);
+                UnregisterHotKey(this.Handle, HOTKEY_ID_HELP + HOTKEY_ID_NUMPAD_OFFSET);
+                UnregisterHotKey(this.Handle, HOTKEY_ID_BRIGHTNESS + HOTKEY_ID_NUMPAD_OFFSET);
                 
                 LogOperation("全局热键已注销");
             }
@@ -843,7 +870,12 @@ namespace ScreenControl
             // 处理全局热键消息
             if (m.Msg == WM_HOTKEY)
             {
+                // 小键盘热键的 id 带偏移，映射回功能 id
                 int id = m.WParam.ToInt32();
+                if (id >= HOTKEY_ID_NUMPAD_OFFSET)
+                {
+                    id -= HOTKEY_ID_NUMPAD_OFFSET;
+                }
                 
                 // 检查是否启用快捷键
                 if (enableHotkeys)
@@ -916,41 +948,63 @@ namespace ScreenControl
             base.WndProc(ref m);
         }
         
-        // 窗口焦点时的快捷键处理（保留原始功能）
+        // 窗口焦点时的快捷键处理（保留原始功能，按键与修饰键跟随全局设置）
         private void MainForm_KeyDown(object sender, KeyEventArgs e)
         {            
             // 检查是否启用快捷键
             if (!enableHotkeys)
                 return;
                 
-            // 处理数字键1（启动系统屏保）
-            if (e.KeyCode == Keys.D1 || e.KeyCode == Keys.NumPad1)
+            int code = (int)e.KeyCode;
+
+            // 处理启动系统屏保
+            if (IsHotkeyMatch(code, e, turnOffScreenKey, turnOffScreenModifier))
             {
                 TurnOffScreen();
                 e.Handled = true;
                 e.SuppressKeyPress = true;
             }
-            // 处理数字键2（DPMS 休眠）
-            else if (e.KeyCode == Keys.D2 || e.KeyCode == Keys.NumPad2)
+            // 处理DPMS休眠
+            else if (IsHotkeyMatch(code, e, dpmsKey, dpmsModifier))
             {
                 DpmsSleep();
                 e.Handled = true;
                 e.SuppressKeyPress = true;
             }
-            // 处理数字键3（亮度调节）
-            else if (e.KeyCode == Keys.D3 || e.KeyCode == Keys.NumPad3)
+            // 处理亮度调节
+            else if (IsHotkeyMatch(code, e, brightnessKey, brightnessModifier))
             {
                 ShowBrightnessDialog();
                 e.Handled = true;
                 e.SuppressKeyPress = true;
             }
-            // 处理Alt+H快捷键（打开帮助）
-            else if (e.Alt && e.KeyCode == Keys.H)
+            // 处理帮助菜单
+            else if (IsHotkeyMatch(code, e, helpKey, helpModifier))
             {
                 ShowHelp();
                 e.Handled = true;
                 e.SuppressKeyPress = true;
             }
+        }
+
+        // 判断按键是否与配置的热键匹配（含修饰键与小键盘等价键）
+        private static bool IsHotkeyMatch(int code, KeyEventArgs e, int mainKey, KeyModifier modifier)
+        {
+            bool keyMatch = code == mainKey || IsNumpadEquivalent(code, mainKey);
+            if (!keyMatch) return false;
+
+            return e.Alt == ((modifier & KeyModifier.Alt) != 0) &&
+                   e.Control == ((modifier & KeyModifier.Control) != 0) &&
+                   e.Shift == ((modifier & KeyModifier.Shift) != 0) &&
+                   e.KeyData.HasFlag(Keys.LWin) == ((modifier & KeyModifier.Win) != 0) &&
+                   e.KeyData.HasFlag(Keys.RWin) == ((modifier & KeyModifier.Win) != 0);
+        }
+
+        // 判断是否为对应的小键盘数字键
+        private static bool IsNumpadEquivalent(int code, int mainKey)
+        {
+            return mainKey >= (int)Keys.D0 && mainKey <= (int)Keys.D9 &&
+                   code == mainKey - (int)Keys.D0 + (int)Keys.NumPad0;
         }
         
 

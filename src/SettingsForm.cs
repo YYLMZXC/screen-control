@@ -81,7 +81,7 @@ namespace ScreenControl
             }
         }
 
-        // 组合键显示文本，如 "Ctrl+Alt+D1"
+        // 组合键显示文本，如 "Ctrl+Alt+1"
         private static string FormatHotkey(MainForm.KeyModifier modifier, int key)
         {
             string text = "";
@@ -89,7 +89,17 @@ namespace ScreenControl
             if (modifier.HasFlag(MainForm.KeyModifier.Alt)) text += "Alt+";
             if (modifier.HasFlag(MainForm.KeyModifier.Shift)) text += "Shift+";
             if (modifier.HasFlag(MainForm.KeyModifier.Win)) text += "Win+";
-            return text + ((Keys)key).ToString();
+            return text + FormatKey(key);
+        }
+
+        // 按键名显示：主键盘数字键显示为 1-9（枚举名是 D1-D9），小键盘数字键显示为 小键盘0-9
+        private static string FormatKey(int key)
+        {
+            if (key >= (int)Keys.D0 && key <= (int)Keys.D9)
+                return ((char)('0' + key - (int)Keys.D0)).ToString();
+            if (key >= (int)Keys.NumPad0 && key <= (int)Keys.NumPad9)
+                return "小键盘" + (key - (int)Keys.NumPad0);
+            return ((Keys)key).ToString();
         }
 
         private void TxtHotkey_KeyDown(object sender, KeyEventArgs e)
@@ -333,7 +343,7 @@ namespace ScreenControl
             this.txtTurnOffScreenKey.Name = "txtTurnOffScreenKey";
             this.txtTurnOffScreenKey.Size = new System.Drawing.Size(240, 21);
             this.txtTurnOffScreenKey.TabIndex = 1;
-            this.txtTurnOffScreenKey.Text = "Alt+D1";
+            this.txtTurnOffScreenKey.Text = "Alt+1";
             // 
             // labelDpmsKey
             // 
@@ -350,7 +360,7 @@ namespace ScreenControl
             this.txtDpmsKey.Name = "txtDpmsKey";
             this.txtDpmsKey.Size = new System.Drawing.Size(240, 21);
             this.txtDpmsKey.TabIndex = 3;
-            this.txtDpmsKey.Text = "Alt+D2";
+            this.txtDpmsKey.Text = "Alt+2";
             // 
             // labelBrightnessKey
             // 
@@ -367,7 +377,7 @@ namespace ScreenControl
             this.txtBrightnessKey.Name = "txtBrightnessKey";
             this.txtBrightnessKey.Size = new System.Drawing.Size(240, 21);
             this.txtBrightnessKey.TabIndex = 5;
-            this.txtBrightnessKey.Text = "Alt+D3";
+            this.txtBrightnessKey.Text = "Alt+3";
             // 
             // labelHelpKey
             // 
