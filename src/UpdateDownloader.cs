@@ -95,9 +95,14 @@ namespace ScreenControl
                 // 构建下载URL
                 string downloadBaseUrl = "https://gitee.com/yylmzxc/screen-control/releases/download/" + updateInfo.LatestVersion;
                 
-                // 优先使用exe文件，格式为Setup-ScreenControl-{版本号}.exe
-                string exeFileName = $"Setup-ScreenControl-{updateInfo.LatestVersion}.exe";
-                string zipFileName = "ScreenControl.zip"; // 备用zip文件
+                // 优先使用exe文件，文件名从Gitee发布信息中获取（动态解析）
+                string exeFileName = string.IsNullOrEmpty(updateInfo.ExeFileName)
+                    ? $"ScreenControl-{updateInfo.LatestVersion}.exe"
+                    : updateInfo.ExeFileName;
+                // 备用zip文件，文件名同样从Gitee发布信息中获取
+                string zipFileName = string.IsNullOrEmpty(updateInfo.ZipFileName)
+                    ? $"{updateInfo.LatestVersion}.zip"
+                    : updateInfo.ZipFileName;
                 
                 // 创建下载器并开始下载
                 UpdateDownloader downloader = new UpdateDownloader(downloadBaseUrl, updateInfo.LatestVersion, statusUpdater, logWriter, parentForm);

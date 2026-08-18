@@ -22,6 +22,8 @@ namespace ScreenControl
             public string LatestVersion { get; set; } = string.Empty;
             public bool HasUpdate { get; set; } = false;
             public string ReleaseUrl { get; set; } = GiteeReleasesUrl;
+            public string ExeFileName { get; set; } = "ScreenControl.exe";
+            public string ZipFileName { get; set; } = string.Empty;
         }
 
         /// <summary>
@@ -50,6 +52,7 @@ namespace ScreenControl
                 {
                     var jsonResponse = await _httpClient.GetStringAsync(GiteeApiUrl);
                     updateInfo.LatestVersion = ExtractVersionFromApiResponse(jsonResponse);
+                    ExtractAssetNamesFromApiResponse(jsonResponse, updateInfo);
                 }
                 catch (HttpRequestException ex)
                 {
@@ -151,6 +154,59 @@ namespace ScreenControl
             catch
             {
                 return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// 从API响应中提取资产文件名（exe/zip）
+        /// </summary>
+        /// <param name="jsonResponse">API响应内容</param>
+        /// <param name="updateInfo">更新信息，用于保存解析结果</param>
+        private void ExtractAssetNamesFromApiResponse(string jsonResponse, UpdateInfo updateInfo)
+        {
+            try
+            {
+                // 查找assets数组的开始位置
+                int assetsIndex = jsonResponse.IndexOf("\"assets\":");
+                if (assetsIndex < 0)
+                {
+                    return;
+                }
+
+                // 从assets数组开始位置向后查找所有name字段
+                int searchIndex = assetsIndex;
+                while (true)
+                {
+                    int nameIndex = jsonResponse.IndexOf("\"name\":", searchIndex);
+                    if (nameIndex < 0)
+                    {
+                        break;
+                    }
+
+                    int startIndex = jsonResponse.IndexOf('"', nameIndex + 7) + 1;
+                    int endIndex = jsonResponse.IndexOf('"', startIndex);
+                    if (startIndex <= 0 || endIndex <= startIndex)
+                    {
+                        break;
+                    }
+
+                    string fileName = jsonResponse.Substring(startIndex, endIndex - startIndex);
+
+                    if (fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        updateInfo.ExeFileName = fileName;
+                    }
+                    else if (fileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                    {
+                        updateInfo.ZipFileName = fileName;
+                    }
+
+                    searchIndex = endIndex + 1;
+                }
+            }
+            catch
+            {
+                // 解析失败时保留默认值
             }
         }
 
