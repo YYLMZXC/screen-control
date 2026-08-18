@@ -761,7 +761,7 @@ namespace ScreenControl
 
                     // 帮助按钮贴右上角
                     btnHelp.Left = ClientSize.Width - (int)(70 * scale); // 距右边缘 20*scale
-                    btnHelp.Top = offsetY + (int)(10 * scale);
+                    btnHelp.Top = (int)(10 * scale);
                     btnHelp.Width = (int)(50 * scale);
                     btnHelp.Height = (int)(30 * scale);
                     float helpBaseSize = baseHelpFontSize > 0 ? baseHelpFontSize : btnHelp.Font.Size;
