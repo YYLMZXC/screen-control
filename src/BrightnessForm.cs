@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Management;
 using System.Windows.Forms;
@@ -23,6 +24,14 @@ namespace ScreenControl
         public BrightnessForm()
         {
             InitializeComponent();
+
+            // 设计器打开窗体时跳过 WMI 查询（OOP 设计器进程中执行
+            // WMI 操作可能导致设计器服务崩溃，表现为 IUIService 缺失）
+            if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
+            {
+                return;
+            }
+
             LoadCurrentBrightness();
         }
 

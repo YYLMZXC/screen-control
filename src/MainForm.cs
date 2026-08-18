@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Drawing;
 using System.Reflection;
 using System.Diagnostics;
+using System.ComponentModel;
 
 namespace ScreenControl
 {
@@ -66,6 +67,16 @@ namespace ScreenControl
         public MainForm()
         {
             InitializeComponent();
+
+            // 设计器打开窗体时跳过运行时初始化：
+            // OOP 设计器（DesignToolsServer 进程）会实例化构造函数，若执行
+            // 写日志/读设置/托盘图标/网络检查/全局热键等操作，会导致设计器
+            // 服务崩溃，表现为 IUIService 等服务缺失。
+            if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
+            {
+                return;
+            }
+
             // 开启双缓冲，减少窗口拉伸/缩放时的闪烁
             this.DoubleBuffered = true;
             this.ResizeRedraw = true;
