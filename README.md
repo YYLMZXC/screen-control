@@ -38,4 +38,4 @@ ScreenControl是一个基于C#/.NET 10.0开发的屏幕控制工具，提供屏�
 - .NET 10.0
 
 ## 截图
-![屏幕截图](res/98.png)
+![屏幕截图](src/res/98.png)
