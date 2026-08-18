@@ -1,1 +1,0 @@
-dotnet build ScreenControl.sln -c Release 
