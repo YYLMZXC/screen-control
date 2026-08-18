@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using System.Threading.Tasks;
 using System.Drawing;
 using System.Reflection;
+using System.Diagnostics;
 
 namespace ScreenControl
 {
@@ -28,6 +29,21 @@ namespace ScreenControl
         private NotifyIcon notifyIcon; // 托盘图标
         private bool enableHotkeys = true; // 快捷键启用状态标志
         private int closeScreenDelay = 2; // 延迟关闭屏幕的秒数，默认x秒
+
+        // 自适应布局基准（与设计器中的初始 ClientSize 一致）
+        private const int LayoutBaseWidth = 600;
+        private const int LayoutBaseHeight = 360;
+        private const float LayoutMinScale = 0.5f;   // 窗口缩小时最小缩放比
+        private const float LayoutMaxScale = 1.6f;   // 窗口放大时最大缩放比
+        private float baseButtonFontSize;  // 功能按钮原始字体大小（用于按比例缩放）
+        private float baseHelpFontSize;    // 帮助按钮原始字体大小
+
+        // 布局性能诊断：字体缓存（复用避免 GDI 句柄泄漏导致卡顿）
+        private Font cachedFuncButtonFont;
+        private Font cachedHelpFont;
+        private long fontCreateCount;      // 字体重建次数（诊断用）
+        private DateTime lastLayoutLogTime;  // 布局日志节流
+        private DateTime lastResizeLogTime;  // 尺寸变化日志节流
         
         // 启动系统屏保快捷键设置
         private int turnOffScreenKey = (int)Keys.D1;
@@ -50,6 +66,9 @@ namespace ScreenControl
         public MainForm()
         {
             InitializeComponent();
+            // 开启双缓冲，减少窗口拉伸/缩放时的闪烁
+            this.DoubleBuffered = true;
+            this.ResizeRedraw = true;
             InitializeMonitorTimer();
             InitializeUptimeTimer();
             InitializeStatusLabel();
@@ -509,29 +528,45 @@ namespace ScreenControl
             }
         }
 
+        private readonly object logWriteLock = new object(); // 日志写盘互斥，保证并发写入不交错
+
         private void LogOperation(string operation)
         {
             try
             {
-                // 确保日志目录存在
-                string logDirectory = Path.GetDirectoryName(LogFilePath);
-                if (!string.IsNullOrEmpty(logDirectory) && !Directory.Exists(logDirectory))
-                {
-                    Directory.CreateDirectory(logDirectory);
-                }
-                
                 string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {operation}";
-                
-                // 使用StreamWriter确保数据立即写入磁盘，防止系统崩溃时丢失数据
-                using (StreamWriter writer = new StreamWriter(LogFilePath, true))
+
+                // 异步写盘：磁盘慢（机械盘/杀毒扫描）时避免阻塞 UI 线程导致卡顿
+                Task.Run(() => WriteLogEntry(logEntry));
+            }
+            catch
+            {
+                // 日志记录失败不应影响主要功能
+            }
+        }
+
+        private void WriteLogEntry(string logEntry)
+        {
+            try
+            {
+                lock (logWriteLock)
                 {
-                    writer.WriteLine(logEntry);
-                    writer.Flush(); // 强制将缓冲区内容写入磁盘
+                    // 确保日志目录存在
+                    string logDirectory = Path.GetDirectoryName(LogFilePath);
+                    if (!string.IsNullOrEmpty(logDirectory) && !Directory.Exists(logDirectory))
+                    {
+                        Directory.CreateDirectory(logDirectory);
+                    }
+
+                    using (StreamWriter writer = new StreamWriter(LogFilePath, true))
+                    {
+                        writer.WriteLine(logEntry);
+                        writer.Flush(); // 强制将缓冲区内容写入磁盘，防止系统崩溃时丢失数据
+                    }
                 }
             }
             catch (Exception ex)
             {
-                // 日志记录失败不应影响主要功能
                 Console.WriteLine($"记录日志失败: {ex.Message}");
             }
         }
@@ -639,7 +674,10 @@ namespace ScreenControl
         {
             try
             {
-                
+                // AutoScale 已应用，记录按钮当前字体大小作为缩放基准
+                baseButtonFontSize = btnScreensaver.Font.Size;
+                baseHelpFontSize = btnHelp.Font.Size;
+
                 
                 // 从嵌入式资源加载背景图片
                 using (Stream stream = typeof(MainForm).Assembly.GetManifestResourceStream("ScreenControl.res.screencontrol.png"))
@@ -659,6 +697,9 @@ namespace ScreenControl
             {
                 UpdateStatus($"加载背景图片失败：{ex.Message}");
             }
+
+            // 窗口首次显示时应用自适应布局
+            LayoutControls();
         }
 
         private int logCounter = 0; // 用于控制日志记录频率
@@ -685,11 +726,140 @@ namespace ScreenControl
             }
         }
 
+        // 根据窗口大小自适应布局：功能按钮等比缩放并居中，帮助按钮贴右上角，状态栏贴底部拉伸
+        private void LayoutControls()
+        {
+            // 最小化时 ClientSize 为 0，直接跳过
+            if (ClientSize.Width <= 0 || ClientSize.Height <= 0)
+                return;
+
+            // InitializeComponent 期间设置 ClientSize 会提前触发 OnResize，
+            // 此时部分按钮可能尚未创建，统一判空保护
+            if (btnScreensaver == null || btnDpmsSleep == null ||
+                btnBrightness == null || btnHelp == null)
+                return;
+
+            Stopwatch sw = Stopwatch.StartNew();
+            try
+            {
+                SuspendLayout(); // 抑制布局风暴，减少闪烁
+                try
+                {
+                    float scaleX = (float)ClientSize.Width / LayoutBaseWidth;
+                    float scaleY = (float)ClientSize.Height / LayoutBaseHeight;
+                    float scale = Math.Min(scaleX, scaleY);
+                    scale = Math.Max(LayoutMinScale, Math.Min(LayoutMaxScale, scale));
+
+                    // 缩放居中偏移
+                    int offsetX = (int)((ClientSize.Width - LayoutBaseWidth * scale) / 2f);
+                    int offsetY = (int)((ClientSize.Height - LayoutBaseHeight * scale) / 2f);
+
+                    // 三个功能按钮按设计位置缩放并居中（字体复用缓存，避免 GDI 泄漏）
+                    LayoutButton(btnScreensaver, 95, 100, 195, 55, scale, offsetX, offsetY, baseButtonFontSize, ref cachedFuncButtonFont);
+                    LayoutButton(btnDpmsSleep, 310, 100, 195, 55, scale, offsetX, offsetY, baseButtonFontSize, ref cachedFuncButtonFont);
+                    LayoutButton(btnBrightness, 95, 180, 195, 55, scale, offsetX, offsetY, baseButtonFontSize, ref cachedFuncButtonFont);
+
+                    // 帮助按钮贴右上角
+                    btnHelp.Left = ClientSize.Width - (int)(70 * scale); // 距右边缘 20*scale
+                    btnHelp.Top = offsetY + (int)(10 * scale);
+                    btnHelp.Width = (int)(50 * scale);
+                    btnHelp.Height = (int)(30 * scale);
+                    float helpBaseSize = baseHelpFontSize > 0 ? baseHelpFontSize : btnHelp.Font.Size;
+                    UpdateButtonFont(btnHelp, helpBaseSize, scale, ref cachedHelpFont);
+
+                    // 状态与运行时间标签贴底部、宽度随窗口拉伸
+                    if (statusLabel != null)
+                    {
+                        statusLabel.Left = 10;
+                        statusLabel.Top = ClientSize.Height - 55;
+                        statusLabel.Width = ClientSize.Width - 20;
+                    }
+                    if (uptimeLabel != null)
+                    {
+                        uptimeLabel.Left = 10;
+                        uptimeLabel.Top = ClientSize.Height - 30;
+                        uptimeLabel.Width = ClientSize.Width - 20;
+                    }
+                }
+                finally
+                {
+                    ResumeLayout(true); // 一次性重绘，减少闪烁
+                }
+            }
+            finally
+            {
+                sw.Stop();
+
+                // 诊断日志：布局超过 5ms 说明有性能问题，立即记录；
+                // 正常布局节流到 10 秒记录一次，避免高频 resize 刷爆日志
+                long elapsedMs = sw.ElapsedMilliseconds;
+                bool tooSlow = elapsedMs >= 5;
+                bool throttleOk = (DateTime.Now - lastLayoutLogTime).TotalSeconds >= 10;
+                if (tooSlow || throttleOk)
+                {
+                    lastLayoutLogTime = DateTime.Now;
+                    LogOperation($"布局诊断：ClientSize={ClientSize.Width}x{ClientSize.Height}，" +
+                        $"缩放比={Math.Max(LayoutMinScale, Math.Min(LayoutMaxScale, Math.Min((float)ClientSize.Width / LayoutBaseWidth, (float)ClientSize.Height / LayoutBaseHeight))):F2}，" +
+                        $"耗时={elapsedMs}ms，字体重建={fontCreateCount}次" +
+                        (tooSlow ? "【布局过慢，可能造成卡顿】" : ""));
+                }
+            }
+        }
+
+        // 按设计坐标与缩放比例重设按钮位置、大小和字体
+        private void LayoutButton(Button btn, int designX, int designY, int designW, int designH,
+            float scale, int offsetX, int offsetY, float baseFontSize, ref Font fontCache)
+        {
+            btn.Left = offsetX + (int)(designX * scale);
+            btn.Top = offsetY + (int)(designY * scale);
+            btn.Width = (int)(designW * scale);
+            btn.Height = (int)(designH * scale);
+            // 基准未记录时（InitializeComponent 期间 OnResize 会提前触发）回退到按钮当前字体
+            float baseSize = baseFontSize > 0 ? baseFontSize : btn.Font.Size;
+            UpdateButtonFont(btn, baseSize, scale, ref fontCache);
+        }
+
+        // 复用字体对象：缩放比未变化时直接沿用，避免每次 resize 都 new Font 造成 GDI 句柄泄漏和卡顿
+        private void UpdateButtonFont(Button btn, float baseSize, float scale, ref Font cache)
+        {
+            float newSize = baseSize * scale;
+            if (cache != null && Math.Abs(cache.Size - newSize) < 0.01f)
+                return; // 字号未变化，复用缓存
+
+            FontFamily family = btn.Font.FontFamily; // 替换前保存，避免 Dispose 后访问已释放对象
+            Font newFont = new Font(family, newSize);
+            fontCreateCount++;
+
+            if (cache != null)
+            {
+                cache.Dispose();
+            }
+            else if (!btn.Font.IsSystemFont)
+            {
+                // 首次替换时释放设计器创建的非系统字体（如 btnHelp 的字体），避免泄漏
+                btn.Font.Dispose();
+            }
+
+            cache = newFont;
+            btn.Font = newFont;
+        }
+
         // 处理窗口大小改变事件，实现最小化到托盘
         protected override void OnResize(EventArgs e)
         {            
             base.OnResize(e);            
             
+            // 窗口大小变化时自适应布局（最小化时内部有保护）
+            LayoutControls();
+
+            // 尺寸变化日志（节流 2 秒，避免拖拽窗口时高频刷日志）
+            if (this.WindowState != FormWindowState.Minimized &&
+                (DateTime.Now - lastResizeLogTime).TotalMilliseconds >= 2000)
+            {
+                lastResizeLogTime = DateTime.Now;
+                LogOperation($"窗口尺寸变化：ClientSize={ClientSize.Width}x{ClientSize.Height}，WindowState={this.WindowState}");
+            }
+
             // 当窗口最小化时，隐藏窗口并显示托盘图标
             if (this.WindowState == FormWindowState.Minimized)
             {                
