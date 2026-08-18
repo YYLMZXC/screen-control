@@ -38,6 +38,8 @@ packages/
 
 # IDE
 .idea/
+.vscode/
+.junie/
 *.swp
 *.swo
 
