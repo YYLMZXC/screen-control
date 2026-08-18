@@ -33,7 +33,6 @@ namespace ScreenControl
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             this.btnScreensaver = new System.Windows.Forms.Button();
             this.btnDpmsSleep = new System.Windows.Forms.Button();
-            this.btnDisableMonitor = new System.Windows.Forms.Button();
             this.btnBrightness = new System.Windows.Forms.Button();
 
             this.SuspendLayout();
@@ -60,25 +59,14 @@ namespace ScreenControl
             this.btnDpmsSleep.UseVisualStyleBackColor = true;
             this.btnDpmsSleep.Click += new System.EventHandler(this.btnDpmsSleep_Click);
             // 
-            // btnDisableMonitor
-            // 
-            this.btnDisableMonitor.Location = new System.Drawing.Point(95, 180);
-            this.btnDisableMonitor.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
-            this.btnDisableMonitor.Name = "btnDisableMonitor";
-            this.btnDisableMonitor.Size = new System.Drawing.Size(195, 55);
-            this.btnDisableMonitor.TabIndex = 4;
-            this.btnDisableMonitor.Text = "禁用显示器(&3)"; // Alt+3 快捷键
-            this.btnDisableMonitor.UseVisualStyleBackColor = true;
-            this.btnDisableMonitor.Click += new System.EventHandler(this.btnDisableMonitor_Click);
-            // 
             // btnBrightness
             // 
-            this.btnBrightness.Location = new System.Drawing.Point(310, 180);
+            this.btnBrightness.Location = new System.Drawing.Point(95, 180);
             this.btnBrightness.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.btnBrightness.Name = "btnBrightness";
             this.btnBrightness.Size = new System.Drawing.Size(195, 55);
-            this.btnBrightness.TabIndex = 5;
-            this.btnBrightness.Text = "亮度调节(&4)"; // Alt+4 快捷键
+            this.btnBrightness.TabIndex = 4;
+            this.btnBrightness.Text = "亮度调节(&3)"; // Alt+3 快捷键
             this.btnBrightness.UseVisualStyleBackColor = true;
             this.btnBrightness.Click += new System.EventHandler(this.btnBrightness_Click);
             // 
@@ -106,7 +94,6 @@ namespace ScreenControl
             
             
             this.Controls.Add(this.btnBrightness);
-            this.Controls.Add(this.btnDisableMonitor);
             this.Controls.Add(this.btnDpmsSleep);
             this.Controls.Add(this.btnScreensaver);
             this.Controls.Add(this.btnHelp);
@@ -122,7 +109,6 @@ namespace ScreenControl
         #endregion
         private System.Windows.Forms.Button btnScreensaver;
         private System.Windows.Forms.Button btnDpmsSleep;
-        private System.Windows.Forms.Button btnDisableMonitor;
         private System.Windows.Forms.Button btnBrightness;
         private System.Windows.Forms.Button btnHelp;
 
