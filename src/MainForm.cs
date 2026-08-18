@@ -19,7 +19,7 @@ namespace ScreenControl
         private bool isScreenOff = false;
         private const string LogFilePath = "bugs/screencontrol.log";
         private const string SettingsFilePath = "settings.json";
-        private const string Version = "1.6.4";
+        private const string Version = "1.7.0";
         private const string GiteeUrl = "https://gitee.com/yylmzxc/screen-control";
         private const string GithubUrl = "https://github.com/YYLMZXC/screen-control";
 
@@ -33,6 +33,7 @@ namespace ScreenControl
         private int turnOffScreenKey = (int)Keys.D1;
         private KeyModifier turnOffScreenModifier = KeyModifier.None;
         private ContextMenuStrip trayMenu; // 托盘右键菜单
+        private ToolStripMenuItem trayDisableMonitorItem; // 托盘"禁用显示器"菜单项
 
         public MainForm()
         {
@@ -97,10 +98,25 @@ namespace ScreenControl
             showMainFormItem.Click += ShowMainFormItem_Click;
             trayMenu.Items.Add(showMainFormItem);
             
-            // 添加关闭屏幕菜单项
-            ToolStripMenuItem turnOffScreenItem = new ToolStripMenuItem("关闭屏幕");
-            turnOffScreenItem.Click += (s, e) => TurnOffScreen();
-            trayMenu.Items.Add(turnOffScreenItem);
+            // 添加启动系统屏保菜单项
+            ToolStripMenuItem screensaverItem = new ToolStripMenuItem("启动系统屏保");
+            screensaverItem.Click += (s, e) => TurnOffScreen();
+            trayMenu.Items.Add(screensaverItem);
+            
+            // 添加DPMS休眠菜单项
+            ToolStripMenuItem dpmsItem = new ToolStripMenuItem("DPMS 休眠");
+            dpmsItem.Click += (s, e) => DpmsSleep();
+            trayMenu.Items.Add(dpmsItem);
+            
+            // 添加禁用显示器菜单项
+            trayDisableMonitorItem = new ToolStripMenuItem("禁用显示器");
+            trayDisableMonitorItem.Click += (s, e) => ToggleDisableMonitors();
+            trayMenu.Items.Add(trayDisableMonitorItem);
+            
+            // 添加亮度调节菜单项
+            ToolStripMenuItem brightnessItem = new ToolStripMenuItem("亮度调节");
+            brightnessItem.Click += (s, e) => ShowBrightnessDialog();
+            trayMenu.Items.Add(brightnessItem);
             
             // 添加分隔线
             trayMenu.Items.Add(new ToolStripSeparator());
@@ -474,10 +490,132 @@ namespace ScreenControl
             }
         }
 
-        private void btnTurnOffScreen_Click(object sender, EventArgs e)
+        // ---------- DPMS 休眠 ----------
+
+        // 广播消息相关常量
+        private const uint WM_SYSCOMMAND = 0x0112;
+        private const int SC_MONITORPOWER = 0xF170;
+        private const int MONITORPOWER_OFF = 2; // 1=低功耗, 2=关闭
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+        /// <summary>
+        /// DPMS 休眠：向所有顶层窗口广播 SC_MONITORPOWER 消息，让显示器进入关闭状态（DPMS Power Off）。
+        /// </summary>
+        private void DpmsSleep()
         {
-            // 点击按钮后只关闭屏幕
+            try
+            {
+                // HWND_BROADCAST = 0xFFFF，广播给所有窗口
+                bool posted = PostMessage(
+                    (IntPtr)0xFFFF, WM_SYSCOMMAND,
+                    (IntPtr)SC_MONITORPOWER, (IntPtr)MONITORPOWER_OFF);
+
+                if (posted)
+                {
+                    string message = $"已发送 DPMS 休眠指令，时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                    LogOperation(message);
+                    UpdateStatus(message);
+                }
+                else
+                {
+                    string errorMsg = "DPMS 休眠指令发送失败";
+                    UpdateStatus(errorMsg);
+                    LogOperation(errorMsg);
+                }
+            }
+            catch (Exception ex)
+            {
+                string errorMsg = $"DPMS 休眠失败：{ex.Message}";
+                UpdateStatus(errorMsg);
+                LogOperation(errorMsg);
+            }
+        }
+
+        // ---------- 禁用显示器 ----------
+
+        private void ToggleDisableMonitors()
+        {
+            try
+            {
+                bool success;
+                string message;
+
+                if (DisplayManager.IsSecondaryDisabled)
+                {
+                    success = DisplayManager.RestoreMonitors();
+                    message = success ? "已恢复所有显示器" : "恢复显示器失败";
+                }
+                else
+                {
+                    success = DisplayManager.DisableSecondaryMonitors();
+                    message = success ? "已禁用所有副屏（保留主屏）" : "禁用显示器失败（本机可能只有一块屏幕）";
+                }
+
+                if (success)
+                {
+                    btnDisableMonitor.Text = DisplayManager.IsSecondaryDisabled ? "恢复显示器(&3)" : "禁用显示器(&3)";
+                    if (trayDisableMonitorItem != null)
+                    {
+                        trayDisableMonitorItem.Text = DisplayManager.IsSecondaryDisabled ? "恢复显示器" : "禁用显示器";
+                    }
+                    UpdateStatus(message);
+                }
+                else
+                {
+                    MessageBox.Show(message, "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                LogOperation(message);
+            }
+            catch (Exception ex)
+            {
+                string errorMsg = $"禁用显示器操作失败：{ex.Message}";
+                UpdateStatus(errorMsg);
+                LogOperation(errorMsg);
+                MessageBox.Show(errorMsg, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // ---------- 亮度调节 ----------
+
+        private void ShowBrightnessDialog()
+        {
+            try
+            {
+                using (BrightnessForm brightnessForm = new BrightnessForm())
+                {
+                    brightnessForm.ShowDialog(this);
+                }
+            }
+            catch (Exception ex)
+            {
+                string errorMsg = $"亮度调节失败：{ex.Message}";
+                UpdateStatus(errorMsg);
+                LogOperation(errorMsg);
+                MessageBox.Show(errorMsg, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void btnScreensaver_Click(object sender, EventArgs e)
+        {
+            // 启动系统屏保
             TurnOffScreen();
+        }
+
+        private void btnDpmsSleep_Click(object sender, EventArgs e)
+        {
+            DpmsSleep();
+        }
+
+        private void btnDisableMonitor_Click(object sender, EventArgs e)
+        {
+            ToggleDisableMonitors();
+        }
+
+        private void btnBrightness_Click(object sender, EventArgs e)
+        {
+            ShowBrightnessDialog();
         }
 
         private void MonitorTimer_Tick(object sender, EventArgs e)
@@ -620,8 +758,11 @@ namespace ScreenControl
 
         // 全局热键常量定义
         private const int WM_HOTKEY = 0x0312;
-        private const int HOTKEY_ID_TURNOFFSCREEN = 1;
-        private const int HOTKEY_ID_HELP = 3;
+        private const int HOTKEY_ID_TURNOFFSCREEN = 1; // 启动系统屏保（可配置）
+        private const int HOTKEY_ID_DPMS = 2;          // DPMS 休眠
+        private const int HOTKEY_ID_HELP = 3;          // 帮助菜单
+        private const int HOTKEY_ID_DISABLE = 4;       // 禁用/恢复显示器
+        private const int HOTKEY_ID_BRIGHTNESS = 5;    // 亮度调节
         
         // 注册/注销全局热键的API声明
         [DllImport("user32.dll")]
@@ -638,7 +779,7 @@ namespace ScreenControl
                 // 注销现有热键，避免冲突
                 UnregisterGlobalHotkeys();
                 
-                // 注册自定义关闭屏幕快捷键
+                // 注册自定义关闭屏幕快捷键（启动系统屏保）
                 RegisterHotKey(this.Handle, HOTKEY_ID_TURNOFFSCREEN, (int)turnOffScreenModifier, turnOffScreenKey);
                 
                 // 如果是数字键，同时注册小键盘上的对应键
@@ -647,6 +788,14 @@ namespace ScreenControl
                     int numPadKey = turnOffScreenKey - (int)Keys.D0 + (int)Keys.NumPad0;
                     RegisterHotKey(this.Handle, HOTKEY_ID_TURNOFFSCREEN, (int)turnOffScreenModifier, numPadKey);
                 }
+                
+                // 注册固定热键：Alt+2 DPMS休眠、Alt+3 禁用/恢复显示器、Alt+4 亮度调节
+                RegisterHotKey(this.Handle, HOTKEY_ID_DPMS, (int)KeyModifier.Alt, (int)Keys.D2);
+                RegisterHotKey(this.Handle, HOTKEY_ID_DPMS, (int)KeyModifier.Alt, (int)Keys.NumPad2);
+                RegisterHotKey(this.Handle, HOTKEY_ID_DISABLE, (int)KeyModifier.Alt, (int)Keys.D3);
+                RegisterHotKey(this.Handle, HOTKEY_ID_DISABLE, (int)KeyModifier.Alt, (int)Keys.NumPad3);
+                RegisterHotKey(this.Handle, HOTKEY_ID_BRIGHTNESS, (int)KeyModifier.Alt, (int)Keys.D4);
+                RegisterHotKey(this.Handle, HOTKEY_ID_BRIGHTNESS, (int)KeyModifier.Alt, (int)Keys.NumPad4);
                 
                 // 注册Alt+H用于打开帮助（保持默认）
                 RegisterHotKey(this.Handle, HOTKEY_ID_HELP, (int)KeyModifier.Alt, (int)Keys.H);
@@ -665,7 +814,10 @@ namespace ScreenControl
             try
             {
                 UnregisterHotKey(this.Handle, HOTKEY_ID_TURNOFFSCREEN);
+                UnregisterHotKey(this.Handle, HOTKEY_ID_DPMS);
                 UnregisterHotKey(this.Handle, HOTKEY_ID_HELP);
+                UnregisterHotKey(this.Handle, HOTKEY_ID_DISABLE);
+                UnregisterHotKey(this.Handle, HOTKEY_ID_BRIGHTNESS);
                 
                 LogOperation("全局热键已注销");
             }
@@ -708,6 +860,15 @@ namespace ScreenControl
                     {
                         case HOTKEY_ID_TURNOFFSCREEN:
                             TurnOffScreen();
+                            break;
+                        case HOTKEY_ID_DPMS:
+                            DpmsSleep();
+                            break;
+                        case HOTKEY_ID_DISABLE:
+                            ToggleDisableMonitors();
+                            break;
+                        case HOTKEY_ID_BRIGHTNESS:
+                            ShowBrightnessDialog();
                             break;
                         case HOTKEY_ID_HELP:
                             ShowHelp();
@@ -773,10 +934,31 @@ namespace ScreenControl
             if (!enableHotkeys)
                 return;
                 
-            // 处理数字键1（关闭屏幕）
+            // 处理数字键1（启动系统屏保）
             if (e.KeyCode == Keys.D1 || e.KeyCode == Keys.NumPad1)
             {
                 TurnOffScreen();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+            // 处理数字键2（DPMS 休眠）
+            else if (e.KeyCode == Keys.D2 || e.KeyCode == Keys.NumPad2)
+            {
+                DpmsSleep();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+            // 处理数字键3（禁用/恢复显示器）
+            else if (e.KeyCode == Keys.D3 || e.KeyCode == Keys.NumPad3)
+            {
+                ToggleDisableMonitors();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+            // 处理数字键4（亮度调节）
+            else if (e.KeyCode == Keys.D4 || e.KeyCode == Keys.NumPad4)
+            {
+                ShowBrightnessDialog();
                 e.Handled = true;
                 e.SuppressKeyPress = true;
             }
@@ -951,7 +1133,12 @@ namespace ScreenControl
             Label descriptionLabel = new Label();
             descriptionLabel.Location = new System.Drawing.Point(20, 140);
             descriptionLabel.Size = new System.Drawing.Size(350, 80);
-            descriptionLabel.Text = "屏幕控制是一款简单实用的工具，支持快速关闭屏幕功能。\n\n快捷键：alt+1,alt+h,alt+a\n1 - 关闭屏幕\nAlt+H - 帮助菜单";
+            descriptionLabel.Text = "屏幕控制是一款简单实用的工具，支持四种屏幕控制方式：\n" +
+                "1 - 启动系统屏保\n" +
+                "2 - DPMS 休眠（显示器进入省电状态）\n" +
+                "3 - 禁用/恢复副屏（保留主屏）\n" +
+                "4 - 亮度调节（支持 ACPI/DDC 的显示器）\n\n" +
+                "快捷键：Alt+1 ~ Alt+4，Alt+H 帮助菜单，Alt+A 关于";
             descriptionLabel.TextAlign = System.Drawing.ContentAlignment.TopLeft;
             descriptionLabel.AutoSize = false;
             

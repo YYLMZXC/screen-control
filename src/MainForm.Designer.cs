@@ -31,20 +31,56 @@ namespace ScreenControl
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
-            this.btnTurnOffScreen = new System.Windows.Forms.Button();
+            this.btnScreensaver = new System.Windows.Forms.Button();
+            this.btnDpmsSleep = new System.Windows.Forms.Button();
+            this.btnDisableMonitor = new System.Windows.Forms.Button();
+            this.btnBrightness = new System.Windows.Forms.Button();
 
             this.SuspendLayout();
             // 
-            // btnTurnOffScreen
+            // btnScreensaver
             // 
-            this.btnTurnOffScreen.Location = new System.Drawing.Point(225, 150);
-            this.btnTurnOffScreen.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
-            this.btnTurnOffScreen.Name = "btnTurnOffScreen";
-            this.btnTurnOffScreen.Size = new System.Drawing.Size(150, 50);
-            this.btnTurnOffScreen.TabIndex = 1;
-            this.btnTurnOffScreen.Text = "关闭屏幕(&1)"; // Alt+1 快捷键
-            this.btnTurnOffScreen.UseVisualStyleBackColor = true;
-            this.btnTurnOffScreen.Click += new System.EventHandler(this.btnTurnOffScreen_Click);
+            this.btnScreensaver.Location = new System.Drawing.Point(95, 100);
+            this.btnScreensaver.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.btnScreensaver.Name = "btnScreensaver";
+            this.btnScreensaver.Size = new System.Drawing.Size(195, 55);
+            this.btnScreensaver.TabIndex = 1;
+            this.btnScreensaver.Text = "启动系统屏保(&1)"; // Alt+1 快捷键
+            this.btnScreensaver.UseVisualStyleBackColor = true;
+            this.btnScreensaver.Click += new System.EventHandler(this.btnScreensaver_Click);
+            // 
+            // btnDpmsSleep
+            // 
+            this.btnDpmsSleep.Location = new System.Drawing.Point(310, 100);
+            this.btnDpmsSleep.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.btnDpmsSleep.Name = "btnDpmsSleep";
+            this.btnDpmsSleep.Size = new System.Drawing.Size(195, 55);
+            this.btnDpmsSleep.TabIndex = 2;
+            this.btnDpmsSleep.Text = "DPMS 休眠(&2)"; // Alt+2 快捷键
+            this.btnDpmsSleep.UseVisualStyleBackColor = true;
+            this.btnDpmsSleep.Click += new System.EventHandler(this.btnDpmsSleep_Click);
+            // 
+            // btnDisableMonitor
+            // 
+            this.btnDisableMonitor.Location = new System.Drawing.Point(95, 180);
+            this.btnDisableMonitor.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.btnDisableMonitor.Name = "btnDisableMonitor";
+            this.btnDisableMonitor.Size = new System.Drawing.Size(195, 55);
+            this.btnDisableMonitor.TabIndex = 4;
+            this.btnDisableMonitor.Text = "禁用显示器(&3)"; // Alt+3 快捷键
+            this.btnDisableMonitor.UseVisualStyleBackColor = true;
+            this.btnDisableMonitor.Click += new System.EventHandler(this.btnDisableMonitor_Click);
+            // 
+            // btnBrightness
+            // 
+            this.btnBrightness.Location = new System.Drawing.Point(310, 180);
+            this.btnBrightness.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.btnBrightness.Name = "btnBrightness";
+            this.btnBrightness.Size = new System.Drawing.Size(195, 55);
+            this.btnBrightness.TabIndex = 5;
+            this.btnBrightness.Text = "亮度调节(&4)"; // Alt+4 快捷键
+            this.btnBrightness.UseVisualStyleBackColor = true;
+            this.btnBrightness.Click += new System.EventHandler(this.btnBrightness_Click);
             // 
             // MainForm
             // 
@@ -69,7 +105,10 @@ namespace ScreenControl
             this.btnHelp.Click += new System.EventHandler(this.btnHelp_Click);
             
             
-            this.Controls.Add(this.btnTurnOffScreen);
+            this.Controls.Add(this.btnBrightness);
+            this.Controls.Add(this.btnDisableMonitor);
+            this.Controls.Add(this.btnDpmsSleep);
+            this.Controls.Add(this.btnScreensaver);
             this.Controls.Add(this.btnHelp);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
@@ -81,7 +120,10 @@ namespace ScreenControl
         }
 
         #endregion
-        private System.Windows.Forms.Button btnTurnOffScreen;
+        private System.Windows.Forms.Button btnScreensaver;
+        private System.Windows.Forms.Button btnDpmsSleep;
+        private System.Windows.Forms.Button btnDisableMonitor;
+        private System.Windows.Forms.Button btnBrightness;
         private System.Windows.Forms.Button btnHelp;
 
 
