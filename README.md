@@ -85,4 +85,4 @@ src/
 
 ## 截图
 
-![屏幕截图](src/res/98.png)
+![屏幕截图](src/res/file/main001.png)
